@@ -1,5 +1,23 @@
 ### 2026-10-02
 
+- **Enlace al ancla:** [Enmascaramiento de datos sensibles](#2026-10-02)
+- **Prompt:** “Sobre el código anterior, implementa RF-15: crea funciones `mask_rut()` (ej. `12.XXX.XXX-K`) y `mask_phone()` (ej. `+56 9 XXXX 1234`). Aplica en todos los GET y errores para nunca exponer datos en claro.”
+- **Respuesta y acciones:** Añadí ambas funciones y las conecté al filtro de logs, a los errores HTTP y a los mensajes de error de consola. La API actual no contiene rutas GET; no se creó un listado público de clientes.
+- **Archivos modificados:** `seguridad/enmascarado.py`, `seguridad/logging_config.py`, `api.py`, `main.py`, `tests/test_seguridad.py` y `tests/test_api_registro.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (24 pruebas); Pylance no reportó errores en los archivos modificados.
+
+- **Enlace al ancla:** [Registro de clientes](#2026-10-02)
+- **Prompt:** “Implementa RF-09: endpoint registro [nombre, RUT, email, teléfono, password]. Valida RUT chileno Mod11, email con regex y único, contraseña de mínimo 8 caracteres con mayúscula, minúscula, número y carácter especial. Guarda contraseña con Argon2id y RUT/teléfono con Fernet.”
+- **Respuesta y acciones:** Añadí `POST /clientes/registro`, validación Mod11 y de contraseña, rechazo de correo duplicado y respuestas HTTP para duplicidad y datos inválidos. El endpoint delega en el servicio existente; contraseña, RUT y teléfono se guardan con sus protecciones correspondientes.
+- **Archivos modificados:** `api.py`, `servicios/autenticacion_servicio.py`, `seguridad/validadores.py`, `repositorios/cliente_repositorio.py`, `requirements.txt`, `README.md`, `tests/test_api_registro.py`, `tests/test_persistencia.py` y `tests/test_seguridad.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (22 pruebas); Pylance no reportó errores en los archivos modificados.
+
+- **Enlace al ancla:** [Gestión de paquetes](#2026-10-02)
+- **Prompt:** “Implementa la lógica de servicio para la creación y consulta de Paquetes (RF-05, RF-06, RF-07, RF-08, RF-17): validar la selección de 2 a 5 destinos distintos y disponibles por ID, fechas y cupo; calcular y fijar el precio con margen `Decimal` y redondeo CLP; listar paquetes vigentes para clientes con cupos disponibles y todos los paquetes para administración indicando si están vigentes o vencidos.”
+- **Respuesta y acciones:** Añadí selección por ID sin romper llamadas por nombre, validación de destinos y margen, conservación del precio publicado, cálculo de cupos según reservas activas y estado del paquete; las salidas de hoy se consideran vencidas.
+- **Archivos modificados:** `servicios/paquete_servicio.py`, `modelos/paquete.py`, `repositorios/destino_repositorio.py`, `repositorios/paquete_repositorio.py` y `tests/test_paquetes.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (17 pruebas); Pylance no reportó errores en los archivos modificados.
+
 - **Enlace al ancla:** [Seguridad y utilidades](#2026-10-02)
 - **Prompt:** “Necesito implementar el módulo de seguridad y utilidades básicas para Python 3.10+: Argon2id para contraseñas, Fernet para RUT y teléfono, aritmética monetaria CLP con `Decimal`, y logging en `app.log` con enmascaramiento de datos sensibles.”
 - **Respuesta y acciones:** Implementé hashing Argon2id y verificación, manteniendo migración de hashes PBKDF2 al iniciar sesión; cifré RUT y teléfono en SQLite e incorporé migración de filas existentes; añadí operaciones CLP con `Decimal` y redondeo entero, además de logging con filtro de enmascaramiento. Documenté la configuración de la clave Fernet y las dependencias.

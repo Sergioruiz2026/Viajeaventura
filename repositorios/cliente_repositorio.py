@@ -1,5 +1,7 @@
 """ creacion de la clase ClienteRepositorio para manejar la lista de clientes """
 
+import sqlite3
+
 from excepciones import CorreoDuplicadoError, ValidacionError
 from modelos.cliente import Cliente
 from repositorios.base_datos import BaseDatos
@@ -38,21 +40,28 @@ class ClienteRepositorio:
             )
         if self.buscar_por_rut(cliente.rut):
             raise ValidacionError("Ya existe un cliente con ese RUT.")
-        with self.__base_datos.transaccion() as conexion:
-            conexion.execute(
-                """
-                INSERT INTO usuarios (
-                    nombre, rut, correo, telefono, password_hash
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    cliente.nombre,
-                    encrypt_data(cliente.rut),
-                    cliente.correo,
-                    encrypt_data(cliente.telefono),
-                    cliente.password_hash
+        try:
+            with self.__base_datos.transaccion() as conexion:
+                conexion.execute(
+                    """
+                    INSERT INTO usuarios (
+                        nombre, rut, correo, telefono, password_hash
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        cliente.nombre,
+                        encrypt_data(cliente.rut),
+                        cliente.correo,
+                        encrypt_data(cliente.telefono),
+                        cliente.password_hash
+                    )
                 )
-            )
+        except sqlite3.IntegrityError as error:
+            if "usuarios.correo" in str(error):
+                raise CorreoDuplicadoError(
+                    "Ya existe un cliente registrado con ese correo."
+                ) from error
+            raise
 
     def listar(self):
         filas = self.__conexion.execute(

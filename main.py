@@ -15,7 +15,7 @@ from servicios.reserva_servicio import ReservaServicio
 
 from excepciones import ValidacionError, ViajesAventuraError
 from seguridad.validadores import Validador
-from seguridad.logging_config import configurar_logging
+from seguridad.logging_config import configurar_logging, enmascarar_texto
 from repositorios.base_datos import BaseDatos
 
 
@@ -123,9 +123,9 @@ def menu_admin():
                 print("Opción inválida.")
 
         except ViajesAventuraError as error:
-            print(f"Error: {error}")
+            print(f"Error: {enmascarar_texto(str(error))}")
         except (ValueError, InvalidOperation) as error:
-            print(f"Dato inválido: {error}")
+            print(f"Dato inválido: {enmascarar_texto(str(error))}")
 
 
 # ==========================
@@ -176,9 +176,9 @@ def menu_cliente(cliente):
                 print("Opción inválida.")
 
         except ViajesAventuraError as error:
-            print(f"Error: {error}")
+            print(f"Error: {enmascarar_texto(str(error))}")
         except ValueError as error:
-            print(f"Dato inválido: {error}")
+            print(f"Dato inválido: {enmascarar_texto(str(error))}")
 
 
 # ==========================
@@ -194,7 +194,10 @@ def solicitar_dato(prompt, validar, comprobar_disponibilidad=None):
                 comprobar_disponibilidad(valor)
             return valor
         except ViajesAventuraError as error:
-            print(f"Error: {error}. Ingrese nuevamente este dato.")
+            print(
+                f"Error: {enmascarar_texto(str(error))}. "
+                "Ingrese nuevamente este dato."
+            )
 
 
 def validar_correo_disponible(correo):
@@ -218,7 +221,10 @@ def solicitar_contrasena():
         try:
             Validador.validar_contrasena(password)
         except ViajesAventuraError as error:
-            print(f"Error: {error}. Ingrese nuevamente la contraseña.")
+            print(
+                f"Error: {enmascarar_texto(str(error))}. "
+                "Ingrese nuevamente la contraseña."
+            )
             continue
 
         confirmacion = leer_contrasena("Confirme la contraseña: ")
@@ -252,7 +258,7 @@ def registrar_cliente():
         )
         print("Cliente registrado correctamente.")
     except ViajesAventuraError as error:
-        print(f"Error: {error}")
+        print(f"Error: {enmascarar_texto(str(error))}")
 
 
 # ==========================
@@ -266,7 +272,7 @@ def login_cliente():
         cliente = auth.iniciar_sesion(correo, password)
         menu_cliente(cliente)
     except ViajesAventuraError as error:
-        print(f"Error: {error}")
+        print(f"Error: {enmascarar_texto(str(error))}")
 
 
 # ==========================

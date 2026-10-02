@@ -5,7 +5,7 @@ from modelos.cliente import Cliente
 from seguridad.validadores import Validador
 from seguridad.contraseñas import GestorContrasenas
 
-from excepciones import AutenticacionError
+from excepciones import AutenticacionError, CorreoDuplicadoError
 
 
 class AutenticacionServicio:
@@ -26,6 +26,10 @@ class AutenticacionServicio:
         Validador.validar_correo(correo)
         Validador.validar_telefono(telefono)
         Validador.validar_contrasena(password)
+        if self.__cliente_repo.buscar_por_correo(correo):
+            raise CorreoDuplicadoError(
+                "Ya existe un cliente registrado con ese correo."
+            )
         password_hash = GestorContrasenas.generar_hash(password)
         cliente = Cliente(
             nombre,

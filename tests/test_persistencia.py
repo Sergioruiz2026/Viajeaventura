@@ -7,6 +7,7 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 
+from excepciones import CorreoDuplicadoError, ValidacionError
 from modelos.destino import Destino
 from modelos.cliente import Cliente
 from repositorios.base_datos import BaseDatos
@@ -40,10 +41,10 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         clientes = ClienteRepositorio(self.base_datos)
         cliente = AutenticacionServicio(clientes).registrar_cliente(
             "Ana",
-            "12345678-9",
+            "12.345.678-5",
             "ana@example.com",
             "+56912345678",
-            "ClaveFuerte1"
+            "ClaveFuerte1!"
         )
 
         fila = self.base_datos.conexion.execute(
@@ -55,6 +56,33 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         self.assertNotEqual(fila["telefono"], cliente.telefono)
         self.assertEqual(clientes.buscar_por_rut(cliente.rut).telefono,
                          cliente.telefono)
+
+    def test_registro_exige_rut_mod11_y_correo_unico(self):
+        clientes = ClienteRepositorio(self.base_datos)
+        servicio = AutenticacionServicio(clientes)
+        cliente = servicio.registrar_cliente(
+            "Ana", "12345678-5", "ana@example.com", "+56912345678",
+            "ClaveFuerte1!"
+        )
+        fila = self.base_datos.conexion.execute(
+            "SELECT rut, telefono, password_hash FROM usuarios WHERE id = 1"
+        ).fetchone()
+
+        self.assertTrue(fila["password_hash"].startswith("$argon2id$"))
+        self.assertNotEqual(fila["rut"], cliente.rut)
+        self.assertNotEqual(fila["telefono"], cliente.telefono)
+
+        with self.assertRaises(CorreoDuplicadoError):
+            servicio.registrar_cliente(
+                "Otra", "12.345.678-5", "ANA@example.com", "+56987654321",
+                "ClaveFuerte2!"
+            )
+
+        with self.assertRaises(ValidacionError):
+            servicio.registrar_cliente(
+                "Inválido", "12.345.678-9", "otro@example.com",
+                "+56987654321", "ClaveFuerte2!"
+            )
 
     def test_migra_rut_y_telefono_heredados_en_texto_claro(self):
         self.base_datos.conexion.execute(
@@ -107,10 +135,10 @@ class PersistenciaSQLiteTests(unittest.TestCase):
 
         cliente = AutenticacionServicio(clientes).registrar_cliente(
             "Ana",
-            "12345678-9",
+            "12.345.678-5",
             "ana@example.com",
             "+56912345678",
-            "ClaveFuerte1"
+            "ClaveFuerte1!"
         )
         destinos.agregar(Destino("Norte", "Norte", "Desierto", 4, 100))
         destinos.agregar(Destino("Sur", "Sur", "Lagos", 5, 200))
@@ -174,8 +202,8 @@ class PersistenciaSQLiteTests(unittest.TestCase):
 
         clientes = ClienteRepositorio(self.base_datos)
         cliente = AutenticacionServicio(clientes).registrar_cliente(
-            "Ana", "12345678-9", "ana@example.com", "+56912345678",
-            "ClaveFuerte1"
+            "Ana", "12.345.678-5", "ana@example.com", "+56912345678",
+            "ClaveFuerte1!"
         )
         destinos = DestinoRepositorio(self.base_datos)
         destinos.agregar(Destino("Norte", "Norte", "Desierto", 4, 100))

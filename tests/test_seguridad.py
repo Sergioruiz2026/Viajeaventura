@@ -5,8 +5,11 @@ from unittest.mock import patch
 
 from cryptography.fernet import Fernet
 
+from excepciones import ValidacionError
+from seguridad.enmascarado import mask_phone, mask_rut
 from seguridad.logging_config import FiltroDatosSensibles
 from seguridad.montos import aplicar_margen_clp, redondear_clp
+from seguridad.validadores import Validador
 from seguridad.seguridad import (
     decrypt_data,
     encrypt_data,
@@ -55,6 +58,31 @@ class SeguridadTests(unittest.TestCase):
         self.assertNotIn("12345678-9", registro.getMessage())
         self.assertNotIn("+56912345678", registro.getMessage())
         self.assertNotIn("Clave Fuerte1", registro.getMessage())
+        self.assertIn("12.XXX.XXX-9", registro.getMessage())
+        self.assertIn("+56 9 XXXX 5678", registro.getMessage())
+
+    def test_mascaras_de_rut_y_telefono(self):
+        self.assertEqual(mask_rut("12.345.678-K"), "12.XXX.XXX-K")
+        self.assertEqual(mask_rut("12345678-5"), "12.XXX.XXX-5")
+        self.assertEqual(mask_phone("+56912341234"), "+56 9 XXXX 1234")
+        self.assertEqual(
+            mask_phone("+56 9 1234 1234"), "+56 9 XXXX 1234"
+        )
+        self.assertEqual(mask_rut("dato inválido"), "[RUT REDACTADO]")
+        self.assertEqual(
+            mask_phone("dato inválido"), "[TELÉFONO REDACTADO]"
+        )
+
+    def test_validadores_de_rut_mod11_y_password_con_caracter_especial(self):
+        Validador.validar_rut("12.345.678-5")
+        Validador.validar_rut("11111111-1")
+        for rut in ("12.345.678-9", "12345678-9", "rut-invalido"):
+            with self.subTest(rut=rut), self.assertRaises(ValidacionError):
+                Validador.validar_rut(rut)
+
+        Validador.validar_contrasena("ClaveFuerte1!")
+        with self.assertRaises(ValidacionError):
+            Validador.validar_contrasena("ClaveFuerte1")
 
 
 if __name__ == "__main__":

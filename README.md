@@ -37,6 +37,20 @@ python main.py
 Los destinos, paquetes, clientes y reservas se almacenan en memoria y se pierden al cerrar la aplicación.
 Los destinos, paquetes, usuarios y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones. Si solo existe la base anterior `viajes_aventura.db`, sus datos se copian una vez al nuevo esquema; el archivo anterior se conserva.
 
+## API de registro
+
+Inicia la API con `python -m uvicorn api:app --reload`. El registro está disponible en `POST /clientes/registro` y recibe un JSON con `nombre`, `rut`, `email`, `telefono` y `password`. Responde con HTTP 201 al registrar, HTTP 409 si el correo ya existe y HTTP 422 ante datos inválidos. La respuesta no incluye RUT, teléfono ni contraseña.
+
+```json
+{
+	"nombre": "Ana Pérez",
+	"rut": "12.345.678-5",
+	"email": "ana@example.com",
+	"telefono": "+56912345678",
+	"password": "ClaveFuerte1!"
+}
+```
+
 Para usar otra ruta de base de datos, define `VIAJES_DB_PATH` antes de iniciar:
 
 ```powershell

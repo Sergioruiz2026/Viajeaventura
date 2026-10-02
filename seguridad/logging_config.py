@@ -3,20 +3,26 @@
 import logging
 import re
 
+from seguridad.enmascarado import mask_phone, mask_rut
 
 _RUT = re.compile(
-    r"(?<!\d)(?:\d{1,2}\.)?\d{3}\.\d{3}-[\dkK]|(?<!\d)\d{7,8}-[\dkK](?!\w)"
+    r"(?<!\w)(?:[0-9]{1,2}\.)?[0-9]{3}\.[0-9]{3}-[0-9Kk]|"
+    r"(?<!\w)[0-9]{7,8}-[0-9Kk](?!\w)"
 )
-_TELEFONO = re.compile(r"(?<!\w)\+?\d{8,15}(?!\w)")
-_ETIQUETA_SENSIBLE = re.compile(
-    r"(?i)(password|contraseña|clave|rut|teléfono|telefono)(\s*[=:]\s*)([^\r\n]*)"
+_TELEFONO = re.compile(
+    r"(?<!\w)(?:\+?56[\s.-]*)?9(?:[\s.-]*[0-9]){8}(?!\w)"
+)
+_ETIQUETA_CREDENCIAL = re.compile(
+    r"(?i)(password|contraseña|clave)(\s*[=:]\s*)([^\r\n]*)"
 )
 
 
 def enmascarar_texto(texto: str) -> str:
-    texto = _ETIQUETA_SENSIBLE.sub(r"\1\2[REDACTADO]", texto)
-    texto = _RUT.sub("[RUT REDACTADO]", texto)
-    return _TELEFONO.sub("[TELÉFONO REDACTADO]", texto)
+    texto = _ETIQUETA_CREDENCIAL.sub(r"\1\2[REDACTADO]", texto)
+    texto = _RUT.sub(lambda coincidencia: mask_rut(coincidencia.group()), texto)
+    return _TELEFONO.sub(
+        lambda coincidencia: mask_phone(coincidencia.group()), texto
+    )
 
 
 class FiltroDatosSensibles(logging.Filter):
