@@ -98,6 +98,42 @@ class AutenticacionSeguraTests(unittest.TestCase):
             "ADMIN"
         )
 
+    def test_admin_puede_crear_otro_y_cambiar_sus_credenciales(self):
+        administrador = Cliente(
+            "Admin", "", "admin@example.com", "",
+            self.servicio_hash("ClaveAdmin1!"), "ADMIN"
+        )
+        self.repositorio.agregar(administrador)
+        sesion = self.servicio.iniciar_sesion(
+            "admin@example.com", "ClaveAdmin1!", ahora=self.ahora
+        )
+
+        self.servicio.crear_administrador(
+            "segundo-admin", "NuevaClave1!", sesion=sesion
+        )
+        segundo = self.servicio.iniciar_sesion(
+            "segundo-admin", "NuevaClave1!", ahora=self.ahora
+        )
+        self.assertEqual(segundo.rol, "ADMIN")
+
+        self.servicio.cambiar_credenciales_administrador(
+            sesion, "admin-nuevo", "OtraClave1!"
+        )
+        with self.assertRaises(AutenticacionError):
+            self.servicio.iniciar_sesion(
+                "admin@example.com", "ClaveAdmin1!", ahora=self.ahora
+            )
+        actualizado = self.servicio.iniciar_sesion(
+            "admin-nuevo", "OtraClave1!", ahora=self.ahora
+        )
+        self.assertEqual(actualizado.rol, "ADMIN")
+
+    @staticmethod
+    def servicio_hash(password):
+        from seguridad.contraseñas import GestorContrasenas
+
+        return GestorContrasenas.generar_hash(password)
+
 
 if __name__ == "__main__":
     unittest.main()

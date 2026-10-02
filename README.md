@@ -39,6 +39,11 @@ $env:VIAJES_ADMIN_PASSWORD = "define-una-clave-segura"
 python main.py
 ```
 
+Las variables `VIAJES_ADMIN_USUARIO` y `VIAJES_ADMIN_PASSWORD` solo se usan
+para crear el primer administrador cuando la base no contiene ninguno.
+Después, las credenciales se administran desde `6. Administrar usuarios`
+dentro del menú ADMIN y quedan guardadas en `app.db`.
+
 Los destinos, paquetes, clientes y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones.
 Al iniciar, la aplicación incorpora automáticamente los seis destinos de
 referencia del caso si todavía no existen. Los paquetes se crean desde el

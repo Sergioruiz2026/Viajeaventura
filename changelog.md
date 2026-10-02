@@ -1,5 +1,20 @@
 ### 2026-10-02
 
+- **Prompt:** “No me deja entrar con las credenciales: Usuario `admin`, contraseña indicada.”
+- **Respuesta y acciones:** Verifiqué que las variables de administrador no estaban configuradas y que `app.db` tenía cero administradores. Configuré `VIAJES_ADMIN_USUARIO=admin` y la contraseña proporcionada como variables de usuario de Windows, creé el primer administrador en `app.db` y comprobé el inicio de sesión con rol `ADMIN`.
+- **Archivos modificados:** `changelog.md`; `app.db` actualizado con el primer administrador.
+- **Validaciones:** Administrador creado: 1; login verificado correctamente con rol `ADMIN`, sin mostrar la contraseña.
+
+- **Prompt:** “Mantener las credenciales actuales, permitir cambiar usuario y contraseña, y crear otros administradores desde un menú interno.”
+- **Respuesta y acciones:** Añadí la gestión protegida de administradores: el primer administrador se crea desde las variables existentes solo si no hay administradores en la base; cualquier administrador autenticado puede cambiar su usuario y contraseña o crear otro administrador. El login acepta administradores persistidos en `app.db`, y el menú de gestión no aparece fuera del menú ADMIN.
+- **Archivos modificados:** `main.py`, `servicios/autenticacion_servicio.py`, `repositorios/cliente_repositorio.py`, `README.md`, `changelog.md`.
+- **Validaciones:** `pytest -q` pasó (44 pruebas, 14 subtests), con 3 advertencias deprecadas de dependencias; se verificó que `app.db` actualmente contiene 0 administradores.
+
+- **Prompt:** “clave de admin”
+- **Respuesta y acciones:** Verifiqué la configuración sin exponer credenciales. No existe una clave de administrador fija en el código; `VIAJES_ADMIN_PASSWORD` no está configurada y el usuario usa `admin` por defecto.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Se comprobó la presencia de `VIAJES_ADMIN_PASSWORD` y `VIAJES_ADMIN_USUARIO` sin mostrar valores secretos.
+
 - **Prompt:** “6: margen de operación ⚠️ Parcial: el menú ADMIN no solicita el margen al crear el paquete.”
 - **Respuesta y acciones:** El menú ADMIN ahora solicita el margen como porcentaje, convierte por ejemplo `20` a `0.20` para el servicio y usa 20 % si se deja vacío. El valor se valida nuevamente en la capa de servicio.
 - **Archivos modificados:** `main.py`, `README.md`, `tests/test_configuracion_consola.py`, `changelog.md`.

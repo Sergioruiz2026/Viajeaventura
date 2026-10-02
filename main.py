@@ -192,6 +192,7 @@ def menu_admin(sesion):
         print("3. Crear paquete")
         print("4. Listar paquetes")
         print("5. Ver reservas")
+        print("6. Administrar usuarios")
         print("0. Cerrar sesión")
 
         opcion = input("Seleccione: ")
@@ -255,6 +256,9 @@ def menu_admin(sesion):
                 for reserva in todas:
                     print(reserva)
 
+            elif opcion == "6":
+                menu_usuarios_admin(sesion)
+
             elif opcion == "0":
                 break
 
@@ -268,6 +272,40 @@ def menu_admin(sesion):
             print(f"Error: {enmascarar_texto(str(error))}")
         except (ValueError, InvalidOperation) as error:
             print("Dato inválido. Revise el valor e intente nuevamente.")
+
+
+def menu_usuarios_admin(sesion):
+    while True:
+        print("\n===== USUARIOS ADMINISTRADORES =====")
+        print("1. Cambiar mi usuario y contraseña")
+        print("2. Crear otro administrador")
+        print("0. Volver")
+        opcion = input("Seleccione: ")
+        try:
+            if opcion == "1":
+                nuevo_usuario = input("Nuevo usuario: ").strip()
+                nueva_password = solicitar_contrasena()
+                auth.cambiar_credenciales_administrador(
+                    sesion, nuevo_usuario, nueva_password
+                )
+                print(
+                    "Credenciales actualizadas. Inicie sesión nuevamente "
+                    "con el nuevo usuario."
+                )
+                return
+            if opcion == "2":
+                usuario = input("Usuario del nuevo administrador: ").strip()
+                password = solicitar_contrasena()
+                auth.crear_administrador(
+                    usuario, password, sesion=sesion
+                )
+                print("Administrador creado correctamente.")
+            elif opcion == "0":
+                return
+            else:
+                print("Opción inválida.")
+        except ViajesAventuraError as error:
+            print(f"Error: {enmascarar_texto(str(error))}")
 
 
 # ==========================
@@ -434,43 +472,28 @@ def login_admin():
     usuario = input("Usuario: ")
     password = getpass.getpass("Contraseña: ")
 
-    if ADMIN_PASSWORD is None:
-        print("Credenciales de administrador no configuradas.")
-    elif usuario != ADMIN_USUARIO:
-        print("Correo o contraseña incorrectos.")
-    else:
-        try:
-            sesion = auth.iniciar_sesion(usuario, password)
-            if sesion.rol != "ADMIN":
-                raise AutenticacionError(
-                    "Correo o contraseña incorrectos."
-                )
-            menu_admin(sesion)
-        except AutenticacionError as error:
-            print(f"Error: {enmascarar_texto(str(error))}")
+    try:
+        sesion = auth.iniciar_sesion(usuario, password)
+        if sesion.rol != "ADMIN":
+            raise AutenticacionError("Correo o contraseña incorrectos.")
+        menu_admin(sesion)
+    except AutenticacionError as error:
+        print(f"Error: {enmascarar_texto(str(error))}")
 
 
 def asegurar_administrador_configurado():
+    if cliente_repo.contar_administradores() > 0:
+        return
     if ADMIN_PASSWORD is None:
         return
-    administrador = cliente_repo.buscar_por_correo(ADMIN_USUARIO)
-    if administrador is None:
-        cliente_repo.agregar(Cliente(
-            "Administrador",
-            "",
-            ADMIN_USUARIO,
-            "",
-            GestorContrasenas.generar_hash(ADMIN_PASSWORD),
-            "ADMIN"
-        ))
-    elif administrador.rol == "ADMIN" and not GestorContrasenas.verificar(
-        ADMIN_PASSWORD, administrador.password_hash
-    ):
-        cliente_repo.actualizar_password_hash(
-            ADMIN_USUARIO,
-            GestorContrasenas.generar_hash(ADMIN_PASSWORD)
-        )
-        cliente_repo.reiniciar_intentos_fallidos(ADMIN_USUARIO)
+    cliente_repo.agregar(Cliente(
+        "Administrador",
+        "",
+        ADMIN_USUARIO,
+        "",
+        GestorContrasenas.generar_hash(ADMIN_PASSWORD),
+        "ADMIN"
+    ))
 
 
 # ==========================

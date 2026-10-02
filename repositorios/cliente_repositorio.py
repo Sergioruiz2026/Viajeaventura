@@ -39,7 +39,7 @@ class ClienteRepositorio:
             raise CorreoDuplicadoError(
                 "Ya existe un cliente registrado con ese correo."
             )
-        if self.buscar_por_rut(cliente.rut):
+        if cliente.rut and self.buscar_por_rut(cliente.rut):
             raise ValidacionError("Ya existe un cliente con ese RUT.")
         try:
             with self.__base_datos.transaccion() as conexion:
@@ -167,6 +167,35 @@ class ClienteRepositorio:
                 "UPDATE usuarios SET password_hash = ? WHERE correo = ?",
                 (password_hash, correo)
             )
+
+    def contar_administradores(self):
+        fila = self.__conexion.execute(
+            "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'ADMIN'"
+        ).fetchone()
+        return fila["total"]
+
+    def actualizar_credenciales_administrador(
+        self, usuario_actual, nuevo_usuario, password_hash
+    ):
+        try:
+            with self.__base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
+                    """
+                    UPDATE usuarios
+                    SET correo = ?, password_hash = ?,
+                        intentos_fallidos = 0, bloqueado_hasta = NULL
+                    WHERE correo = ? AND rol = 'ADMIN'
+                    """,
+                    (nuevo_usuario, password_hash, usuario_actual)
+                )
+                if cursor.rowcount == 0:
+                    raise ValidacionError(
+                        "No se encontró el administrador actual."
+                    )
+        except sqlite3.IntegrityError as error:
+            raise CorreoDuplicadoError(
+                "Ya existe un administrador con ese usuario."
+            ) from error
 
     @staticmethod
     def __desde_fila(fila):

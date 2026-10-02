@@ -8,7 +8,11 @@ from modelos.sesion import Sesion
 from seguridad.validadores import Validador
 from seguridad.contraseñas import GestorContrasenas
 
-from excepciones import AutenticacionError, CorreoDuplicadoError
+from excepciones import (
+    AutenticacionError,
+    CorreoDuplicadoError,
+    ValidacionError,
+)
 
 
 class AutenticacionServicio:
@@ -64,3 +68,42 @@ class AutenticacionServicio:
             )
         self.__cliente_repo.reiniciar_intentos_fallidos(correo)
         return Sesion(cliente, ahora=ahora)
+
+    def crear_administrador(self, usuario, password, *, sesion):
+        if not isinstance(sesion, Sesion) or sesion.rol != "ADMIN":
+            raise AutenticacionError(
+                "Se requiere una sesión de administrador."
+            )
+        if not isinstance(usuario, str) or not usuario.strip():
+            raise ValidacionError("El usuario administrador es obligatorio.")
+        Validador.validar_contrasena(password)
+        usuario = usuario.strip()
+        if self.__cliente_repo.buscar_por_correo(usuario):
+            raise CorreoDuplicadoError(
+                "Ya existe un usuario con ese nombre."
+            )
+        administrador = Cliente(
+            "Administrador",
+            "",
+            usuario,
+            "",
+            GestorContrasenas.generar_hash(password),
+            "ADMIN"
+        )
+        self.__cliente_repo.agregar(administrador)
+
+    def cambiar_credenciales_administrador(
+        self, sesion, nuevo_usuario, nueva_password
+    ):
+        if not isinstance(sesion, Sesion) or sesion.rol != "ADMIN":
+            raise AutenticacionError(
+                "Se requiere una sesión de administrador."
+            )
+        if not isinstance(nuevo_usuario, str) or not nuevo_usuario.strip():
+            raise ValidacionError("El usuario administrador es obligatorio.")
+        Validador.validar_contrasena(nueva_password)
+        self.__cliente_repo.actualizar_credenciales_administrador(
+            sesion.correo,
+            nuevo_usuario.strip(),
+            GestorContrasenas.generar_hash(nueva_password)
+        )
