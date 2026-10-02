@@ -1,5 +1,11 @@
 ### 2026-10-02
 
+- **Enlace al ancla:** [Suite automatizada con pytest](#2026-10-02)
+- **Prompt:** “Crea la suite de pruebas automatizadas con `pytest` para verificar las reglas RNF-08: al menos 27 pruebas unitarias e integrales para destinos, paquetes, autenticación y reservas, incluyendo concurrencia de cupos, doble reserva y liberación tras cancelar; configura la base de pruebas en memoria (`:memory:`).”
+- **Respuesta y acciones:** Configuré la recolección de `pytest`, añadí la dependencia y un fixture SQLite en memoria. Incorporé una prueba concurrente con conexiones independientes y base temporal para verificar que un cupo no se sobreasigne; las pruebas existentes se descubren junto con las nuevas.
+- **Archivos modificados:** `requirements.txt`, `pytest.ini` y `tests/test_pytest_suite.py`.
+- **Validaciones:** `python -m pytest -q` pasó (41 pruebas, 14 subtests); la prueba concurrente pasó cinco ejecuciones consecutivas.
+
 - **Enlace al ancla:** [Reservas y cupos](#2026-10-02)
 - **Prompt:** “Implementa RF-11, RF-18 y RNF-05: permitir al cliente autenticado reservar por `paquete_id` y cantidad; validar cantidad y fecha de salida; calcular cupo activo y guardar fecha de emisión y total dentro de una transacción atómica; impedir dos reservas activas del mismo cliente para el paquete, pero permitir otra tras cancelar.”
 - **Respuesta y acciones:** Cambié la reserva para recibir el ID del paquete, mostré ese ID en el listado, validé cantidad y vigencia, y mantuve el cálculo de cupo y la inserción en una transacción. Añadí protección de duplicados activos en el repositorio y SQLite; las reservas canceladas no bloquean una nueva.
