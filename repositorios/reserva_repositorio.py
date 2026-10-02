@@ -41,7 +41,7 @@ class ReservaRepositorio:
                     paquete["id"],
                     reserva.cantidad_personas,
                     reserva.fecha_emision.isoformat(),
-                    reserva.total
+                    int(reserva.total)
                 )
             )
 

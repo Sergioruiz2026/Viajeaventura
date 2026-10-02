@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
 import getpass
 import os
 
@@ -14,6 +15,7 @@ from servicios.reserva_servicio import ReservaServicio
 
 from excepciones import ValidacionError, ViajesAventuraError
 from seguridad.validadores import Validador
+from seguridad.logging_config import configurar_logging
 from repositorios.base_datos import BaseDatos
 
 
@@ -64,7 +66,7 @@ def menu_admin():
                 zona = input("Zona: ")
                 descripcion = input("Descripción: ")
                 duracion = int(input("Duración días: "))
-                costo = float(input("Costo base: "))
+                costo = Decimal(input("Costo base: "))
                 catalogo.registrar_destino(
                     nombre,
                     zona,
@@ -122,7 +124,7 @@ def menu_admin():
 
         except ViajesAventuraError as error:
             print(f"Error: {error}")
-        except ValueError as error:
+        except (ValueError, InvalidOperation) as error:
             print(f"Dato inválido: {error}")
 
 
@@ -288,6 +290,7 @@ def login_admin():
 # ==========================
 
 def main():
+    configurar_logging()
     while True:
         print("\n======================")
         print(" VIAJES AVENTURA ")

@@ -28,7 +28,7 @@ class DestinoRepositorio:
                         destino.zona,
                         destino.descripcion,
                         destino.duracion_dias,
-                        destino.costo_base,
+                        int(destino.costo_base),
                         int(destino.disponible)
                     )
                 )

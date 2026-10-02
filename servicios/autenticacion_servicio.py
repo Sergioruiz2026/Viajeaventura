@@ -48,4 +48,9 @@ class AutenticacionServicio:
         )
         if not valido:
             raise AutenticacionError("Contraseña incorrecta.")
+        if not cliente.password_hash.startswith("$argon2id$"):
+            self.__cliente_repo.actualizar_password_hash(
+                correo,
+                GestorContrasenas.generar_hash(password)
+            )
         return cliente

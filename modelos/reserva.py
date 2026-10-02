@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from excepciones import ValidacionError
+from seguridad.montos import a_decimal, redondear_clp
 
 
 class Reserva:
@@ -24,8 +25,8 @@ class Reserva:
         self.__paquete = paquete
         self.__cantidad_personas = cantidad_personas
         self.__fecha_emision = fecha_emision or datetime.now()
-        self.__total = (
-            paquete.precio_por_persona * cantidad_personas
+        self.__total = redondear_clp(
+            a_decimal(paquete.precio_por_persona) * cantidad_personas
             if total is None
             else total
         )

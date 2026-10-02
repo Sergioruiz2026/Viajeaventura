@@ -30,7 +30,7 @@ class PaqueteRepositorio:
                         paquete.fecha_salida.isoformat(),
                         paquete.fecha_regreso.isoformat(),
                         paquete.cupo_maximo,
-                        paquete.precio_por_persona
+                        int(paquete.precio_por_persona)
                     )
                 )
                 for orden, destino in enumerate(paquete.destinos):

@@ -6,6 +6,23 @@ Aplicación de consola para administrar destinos, paquetes, clientes y reservas.
 ## Requisitos
 
 - Python 3.10 o posterior
+- Dependencias: `python -m pip install -r requirements.txt`
+
+## Configuración de seguridad
+
+Las contraseñas se almacenan con Argon2id. RUT y teléfono se cifran con
+Fernet; configura una clave estable y mantenla fuera del repositorio. En
+PowerShell, genera una clave una sola vez y guárdala de forma segura:
+
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+$env:VIAJES_FERNET_KEY = "clave-generada"
+```
+
+La clave debe conservarse entre ejecuciones y respaldarse por separado de la
+base de datos. Si se pierde o cambia, los datos cifrados existentes no podrán
+descifrarse. Los eventos de logging se escriben en `app.log` y el filtro
+enmascara RUT, teléfonos y valores asociados a etiquetas de credenciales.
 
 ## Ejecución
 

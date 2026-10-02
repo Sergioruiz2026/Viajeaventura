@@ -3,6 +3,7 @@
 from datetime import date
 
 from excepciones import ValidacionError
+from seguridad.montos import a_decimal, aplicar_margen_clp
 
 
 class Paquete:
@@ -33,11 +34,14 @@ class Paquete:
         self.__fecha_salida = fecha_salida
         self.__fecha_regreso = fecha_regreso
         self.__cupo_maximo = cupo_maximo
-        costo_total = sum(destino.costo_base for destino in destinos)
+        costo_total = sum(
+            (a_decimal(destino.costo_base) for destino in destinos),
+            start=a_decimal(0)
+        )
         self.__precio_por_persona = (
-            costo_total * (1 + margen)
+            aplicar_margen_clp(costo_total, margen)
             if precio_por_persona is None
-            else precio_por_persona
+            else aplicar_margen_clp(precio_por_persona, 0)
         )
 
     @property

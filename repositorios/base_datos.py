@@ -37,7 +37,7 @@ class BaseDatos:
                 zona TEXT NOT NULL,
                 descripcion TEXT NOT NULL,
                 duracion_dias INTEGER NOT NULL,
-                costo_base REAL NOT NULL,
+                costo_base INTEGER NOT NULL,
                 disponible INTEGER NOT NULL DEFAULT 1
             );
 
@@ -47,7 +47,7 @@ class BaseDatos:
                 fecha_salida TEXT NOT NULL,
                 fecha_regreso TEXT NOT NULL,
                 cupo_maximo INTEGER NOT NULL,
-                precio_por_persona REAL NOT NULL
+                precio_por_persona INTEGER NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS paquete_destinos (
@@ -77,7 +77,7 @@ class BaseDatos:
                     ON DELETE RESTRICT,
                 cantidad_personas INTEGER NOT NULL,
                 fecha_emision TEXT NOT NULL,
-                total REAL NOT NULL
+                total INTEGER NOT NULL
             );
             """
         )

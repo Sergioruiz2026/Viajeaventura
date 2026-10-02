@@ -1,12 +1,14 @@
 """ creacion de la clase Destino para el proyecto ViajesAventura """
 
 from excepciones import ValidacionError
+from seguridad.montos import redondear_clp
 
 
 class Destino:
     def __init__(self, nombre, zona, descripcion, duracion_dias, costo_base):
         if not nombre.strip():
             raise ValidacionError("El nombre del destino es obligatorio.")
+        costo_base = redondear_clp(costo_base)
         if costo_base <= 0:
             raise ValidacionError("El costo base debe ser mayor que cero.")
         if duracion_dias <= 0:
@@ -44,6 +46,7 @@ class Destino:
         return self.__disponible
 
     def actualizar_costo(self, nuevo_costo):
+        nuevo_costo = redondear_clp(nuevo_costo)
         if nuevo_costo <= 0:
             raise ValidacionError("Costo inválido.")
         self.__costo_base = nuevo_costo
