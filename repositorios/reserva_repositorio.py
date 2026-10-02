@@ -1,7 +1,7 @@
 """cracion de la clase reserva repositorio"""
 
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 
 from excepciones import CupoInsuficienteError, ReservaNoPermitidaError
 from modelos.reserva import Reserva
@@ -18,6 +18,7 @@ class ReservaRepositorio:
         self.__paquetes = PaqueteRepositorio(self.__base_datos)
 
     def agregar(self, reserva, paquete_id=None):
+        reserva_id = None
         try:
             with self.__base_datos.transaccion() as conexion:
                 cliente = conexion.execute(
@@ -65,7 +66,7 @@ class ReservaRepositorio:
                     raise CupoInsuficienteError(
                         f"Solo quedan {disponibles} cupos."
                     )
-                conexion.execute(
+                cursor = conexion.execute(
                     """
                     INSERT INTO reservas (
                         usuario_id, paquete_id, cantidad_personas,
@@ -80,6 +81,7 @@ class ReservaRepositorio:
                         int(reserva.total)
                     )
                 )
+                reserva_id = cursor.lastrowid
         except sqlite3.IntegrityError as error:
             detalle = str(error)
             if "Ya existe una reserva activa" in detalle:
@@ -98,6 +100,11 @@ class ReservaRepositorio:
                     "No hay cupos suficientes para esta reserva."
                 ) from error
             raise
+        fila = self.__conexion.execute(
+            "SELECT * FROM reservas WHERE id = ?",
+            (reserva_id,)
+        ).fetchone()
+        return self.__desde_fila(fila)
 
     def listar(self):
         filas = self.__conexion.execute(
@@ -105,18 +112,55 @@ class ReservaRepositorio:
         ).fetchall()
         return [self.__desde_fila(fila) for fila in filas]
 
-    def reservas_por_cliente(self, correo):
+    def reservas_por_cliente(self, usuario_id):
         filas = self.__conexion.execute(
             """
             SELECT r.*
             FROM reservas AS r
-            JOIN usuarios AS c ON c.id = r.usuario_id
-            WHERE c.correo = ?
+            WHERE r.usuario_id = ?
             ORDER BY r.id
             """,
-            (correo,)
+            (usuario_id,)
         ).fetchall()
         return [self.__desde_fila(fila) for fila in filas]
+
+    def cancelar(self, reserva_id, usuario_id, fecha_actual=None):
+        fecha_actual = fecha_actual or date.today()
+        with self.__base_datos.transaccion() as conexion:
+            fila = conexion.execute(
+                """
+                SELECT r.estado, p.fecha_salida
+                FROM reservas AS r
+                JOIN paquetes AS p ON p.id = r.paquete_id
+                WHERE r.id = ? AND r.usuario_id = ?
+                """,
+                (reserva_id, usuario_id)
+            ).fetchone()
+            if fila is None:
+                raise ReservaNoPermitidaError(
+                    "No se encontró una reserva propia."
+                )
+            if fila["estado"] != "ACTIVA":
+                raise ReservaNoPermitidaError(
+                    "La reserva no está activa."
+                )
+            if date.fromisoformat(fila["fecha_salida"]) <= fecha_actual:
+                raise ReservaNoPermitidaError(
+                    "No se puede cancelar una reserva cuyo paquete ya inició."
+                )
+            conexion.execute(
+                """
+                UPDATE reservas SET estado = 'CANCELADA'
+                WHERE id = ? AND usuario_id = ? AND estado = 'ACTIVA'
+                """,
+                (reserva_id, usuario_id)
+            )
+
+        fila_actualizada = self.__conexion.execute(
+            "SELECT * FROM reservas WHERE id = ?",
+            (reserva_id,)
+        ).fetchone()
+        return self.__desde_fila(fila_actualizada)
 
     def reservas_por_paquete(self, nombre_paquete):
         filas = self.__conexion.execute(
@@ -157,5 +201,7 @@ class ReservaRepositorio:
             self.__paquetes.buscar_por_nombre(paquete["nombre"]),
             fila["cantidad_personas"],
             datetime.fromisoformat(fila["fecha_emision"]),
-            fila["total"]
+            fila["total"],
+            id_reserva=fila["id"],
+            estado=fila["estado"]
         )

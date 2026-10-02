@@ -145,6 +145,50 @@ class CrearReservasTests(unittest.TestCase):
         ).fetchall()
         self.assertEqual([fila["estado"] for fila in filas], ["CANCELADA", "ACTIVA"])
 
+    def test_historial_aislado_por_usuario_y_cancelacion_propia(self):
+        reserva_ana = self.servicio.crear_reserva(
+            self.sesion_ana, self.id_paquete, 1
+        )
+        reserva_bea = self.servicio.crear_reserva(
+            self.sesion_bea, self.id_paquete, 1
+        )
+        self.assertEqual(
+            [r.id for r in self.servicio.reservas_cliente(self.sesion_ana)],
+            [reserva_ana.id]
+        )
+        self.assertEqual(
+            [r.id for r in self.servicio.reservas_cliente(self.sesion_bea)],
+            [reserva_bea.id]
+        )
+
+        with self.assertRaises(ReservaNoPermitidaError):
+            self.servicio.cancelar_reserva(self.sesion_bea, reserva_ana.id)
+
+        cancelada = self.servicio.cancelar_reserva(
+            self.sesion_ana, reserva_ana.id
+        )
+        self.assertEqual(cancelada.estado, "CANCELADA")
+        self.assertEqual(cancelada.total, reserva_ana.total)
+        self.assertEqual(self.reservas.cupos_ocupados("Ruta"), 1)
+        with self.assertRaises(ReservaNoPermitidaError):
+            self.servicio.cancelar_reserva(self.sesion_ana, reserva_ana.id)
+
+    def test_rechaza_cancelacion_el_dia_de_inicio(self):
+        id_paquete_hoy = self.crear_paquete(
+            "Sale hoy", cupo=2, salida=date.today()
+        )
+        reserva = self.servicio.crear_reserva(
+            self.sesion_ana, id_paquete_hoy, 1
+        )
+
+        with self.assertRaises(ReservaNoPermitidaError):
+            self.servicio.cancelar_reserva(self.sesion_ana, reserva.id)
+
+        guardada = self.reservas.reservas_por_cliente(
+            self.sesion_ana.usuario.id
+        )
+        self.assertEqual(guardada[0].estado, "ACTIVA")
+
 
 if __name__ == "__main__":
     unittest.main()

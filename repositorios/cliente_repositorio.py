@@ -176,5 +176,6 @@ class ClienteRepositorio:
             fila["correo"],
             decrypt_data(fila["telefono"]),
             fila["password_hash"],
-            fila["rol"]
+            fila["rol"],
+            usuario_id=fila["id"]
         )

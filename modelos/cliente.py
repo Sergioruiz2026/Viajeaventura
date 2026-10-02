@@ -7,14 +7,20 @@ class Cliente:
         correo,
         telefono,
         password_hash,
-        rol="CLIENTE"):
+        rol="CLIENTE",
+        usuario_id=None):
 
+        self.__id = usuario_id
         self.__nombre = nombre
         self.__rut = rut
         self.__correo = correo
         self.__telefono = telefono
         self.__password_hash = password_hash
         self.__rol = rol
+
+    @property
+    def id(self):
+        return self.__id
 
     @property
     def nombre(self):

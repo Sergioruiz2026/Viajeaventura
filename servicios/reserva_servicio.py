@@ -35,12 +35,18 @@ class ReservaServicio:
             )
 
         reserva = Reserva(sesion.usuario, paquete, cantidad_personas)
-        self.__reserva_repo.agregar(reserva, paquete_id=paquete_id)
-        return reserva
+        return self.__reserva_repo.agregar(reserva, paquete_id=paquete_id)
 
     def reservas_cliente(self, sesion):
         exigir_rol(sesion, "CLIENTE")
-        return self.__reserva_repo.reservas_por_cliente(sesion.usuario.correo)
+        return self.__reserva_repo.reservas_por_cliente(sesion.usuario.id)
+
+    def cancelar_reserva(self, sesion, reserva_id):
+        exigir_rol(sesion, "CLIENTE")
+        return self.__reserva_repo.cancelar(
+            reserva_id,
+            sesion.usuario.id
+        )
 
     def listar_reservas(self, *, sesion):
         exigir_rol(sesion, "ADMIN")

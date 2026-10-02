@@ -150,6 +150,7 @@ def menu_cliente(sesion):
         print("1. Ver paquetes")
         print("2. Reservar paquete")
         print("3. Mis reservas")
+        print("4. Cancelar reserva")
         print("0. Cerrar sesión")
 
         opcion = input("Seleccione: ")
@@ -178,6 +179,11 @@ def menu_cliente(sesion):
                     print("No posee reservas.")
                 for reserva in mis_reservas:
                     print(reserva)
+
+            elif opcion == "4":
+                reserva_id = int(input("ID de reserva: "))
+                reservas.cancelar_reserva(sesion, reserva_id)
+                print("Reserva cancelada.")
 
             elif opcion == "0":
                 break

@@ -190,7 +190,7 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         cliente_guardado = clientes.buscar_por_correo("ANA@example.com")
         paquete_guardado = paquetes.buscar_por_nombre("ruta chile")
         reservas_guardadas = reservas.reservas_por_cliente(
-            "ana@example.com"
+            cliente_guardado.id
         )
 
         self.assertIsNotNone(cliente_guardado)

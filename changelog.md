@@ -1,5 +1,11 @@
 ### 2026-10-02
 
+- **Enlace al ancla:** [Reservas y cupos](#2026-10-02)
+- **Prompt:** “Implementa RF-11, RF-18 y RNF-05: permitir al cliente autenticado reservar por `paquete_id` y cantidad; validar cantidad y fecha de salida; calcular cupo activo y guardar fecha de emisión y total dentro de una transacción atómica; impedir dos reservas activas del mismo cliente para el paquete, pero permitir otra tras cancelar.”
+- **Respuesta y acciones:** Cambié la reserva para recibir el ID del paquete, mostré ese ID en el listado, validé cantidad y vigencia, y mantuve el cálculo de cupo y la inserción en una transacción. Añadí protección de duplicados activos en el repositorio y SQLite; las reservas canceladas no bloquean una nueva.
+- **Archivos modificados:** `modelos/paquete.py`, `modelos/reserva.py`, `repositorios/db_setup.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `servicios/reserva_servicio.py`, `main.py`, `tests/test_persistencia.py` y `tests/test_reservas.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (34 pruebas); Pylance no reportó errores en los archivos modificados.
+
 - **Enlace al ancla:** [Autenticación y autorización](#2026-10-02)
 - **Prompt:** “Implementa el sistema de autenticación (RF-10), control de intentos (RNF-04) y autorización por roles (RF-13): usar un mensaje genérico para credenciales incorrectas; bloquear la cuenta durante 15 minutos tras cinco fallos consecutivos; expirar sesiones tras 30 minutos de inactividad; permitir gestión de destinos/paquetes solo a ADMIN y reservas/historial propio solo a CLIENTE autenticado.”
 - **Respuesta y acciones:** Unifiqué mensajes de login, persistí contador y vencimiento de bloqueo, añadí sesiones con expiración por inactividad y guards por rol en los servicios. Integré los guards a los menús y aprovisioné el administrador configurado por entorno como cuenta ADMIN para compartir el flujo de autenticación.
