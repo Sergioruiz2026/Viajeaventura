@@ -25,6 +25,7 @@ class PresentacionConsolaTests(unittest.TestCase):
         with (
             patch.object(main, "configurar_logging"),
             patch.object(main, "inicializar_aplicacion"),
+            patch.object(main, "cargar_destinos_iniciales"),
             patch.object(main, "asegurar_administrador_configurado"),
             patch("builtins.input", return_value="0"),
             redirect_stdout(salida)

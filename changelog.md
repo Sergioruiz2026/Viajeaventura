@@ -1,5 +1,20 @@
 ### 2026-10-02
 
+- **Prompt:** “6: margen de operación ⚠️ Parcial: el menú ADMIN no solicita el margen al crear el paquete.”
+- **Respuesta y acciones:** El menú ADMIN ahora solicita el margen como porcentaje, convierte por ejemplo `20` a `0.20` para el servicio y usa 20 % si se deja vacío. El valor se valida nuevamente en la capa de servicio.
+- **Archivos modificados:** `main.py`, `README.md`, `tests/test_configuracion_consola.py`, `changelog.md`.
+- **Validaciones:** `pytest -q` pasó (43 pruebas, 14 subtests), con 3 advertencias deprecadas de dependencias; Pylance no reportó errores en los archivos modificados.
+
+- **Prompt:** “en base al caso_viajes_aventura.md verifiquemos que falta en el codigo”
+- **Respuesta y acciones:** Revisé las reglas R1–R17, el alcance y los supuestos del caso contra modelos, servicios, repositorios, interfaz, API y pruebas. Identifiqué como pendientes principales solicitar el margen de operación en el menú ADMIN, normalizar acentos para la unicidad de destinos, actualizar el informe que aún marca módulos como pendientes y decidir si se conserva la cancelación implementada pese a que S1 documenta inicialmente reservas inmutables.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Revisión estática de los archivos del proyecto y suite existente previamente validada: `pytest -q` pasó (42 pruebas, 14 subtests).
+
+- **Prompt:** “Destino, zona, duración y costo base por persona: implementemos los destinos dentro de los paquetes.”
+- **Respuesta y acciones:** Incorporé la carga inicial idempotente de Valle del Elqui, Salar de Surire, Cajón del Maipo, Parque Conguillío, Carretera Austral e Isla Damas en `app.db`. Por decisión del usuario, los paquetes se crearán posteriormente desde el menú ADMIN con fechas y cupos definidos por él.
+- **Archivos modificados:** `main.py`, `README.md`, `changelog.md`.
+- **Validaciones:** Se cargaron los seis destinos en `app.db` sin duplicarlos; `pytest -q` pasó (42 pruebas, 14 subtests), con 3 advertencias deprecadas de dependencias.
+
 - **Prompt:** “dejemos la que está funcional y eliminemos la otra”
 - **Respuesta y acciones:** Conservé `app.db` como base activa y eliminé la base antigua `viajes_aventura.db`. Actualicé la documentación para reflejar que solo se utiliza la base SQLite activa.
 - **Archivos modificados:** `README.md`, `changelog.md`; eliminado `viajes_aventura.db`.

@@ -40,6 +40,11 @@ python main.py
 ```
 
 Los destinos, paquetes, clientes y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones.
+Al iniciar, la aplicación incorpora automáticamente los seis destinos de
+referencia del caso si todavía no existen. Los paquetes se crean desde el
+menú ADMIN, donde se deben definir sus fechas y cupo.
+También se solicita el margen de operación como porcentaje; si se deja vacío,
+se aplica el valor predeterminado de 20 %.
 
 ## API de registro
 

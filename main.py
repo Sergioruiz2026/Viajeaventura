@@ -20,6 +20,7 @@ from servicios.paquete_servicio import PaqueteServicio
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.reserva_servicio import ReservaServicio
 from modelos.cliente import Cliente
+from modelos.destino import Destino
 from seguridad.contraseñas import GestorContrasenas
 
 from excepciones import (
@@ -61,6 +62,52 @@ reservas: ReservaServicio
 
 ADMIN_USUARIO = os.environ.get("VIAJES_ADMIN_USUARIO", "admin")
 ADMIN_PASSWORD = os.environ.get("VIAJES_ADMIN_PASSWORD")
+MARGEN_OPERACION_POR_DEFECTO = Decimal("0.20")
+
+DESTINOS_INICIALES = (
+    (
+        "Valle del Elqui",
+        "Región de Coquimbo",
+        "Destino turístico del Valle del Elqui.",
+        2,
+        120000,
+    ),
+    (
+        "Salar de Surire",
+        "Región de Arica y Parinacota",
+        "Destino turístico del Salar de Surire.",
+        3,
+        310000,
+    ),
+    (
+        "Cajón del Maipo",
+        "Región Metropolitana",
+        "Destino turístico del Cajón del Maipo.",
+        1,
+        45000,
+    ),
+    (
+        "Parque Conguillío",
+        "Región de La Araucanía",
+        "Destino turístico del Parque Conguillío.",
+        3,
+        185000,
+    ),
+    (
+        "Carretera Austral",
+        "Región de Aysén",
+        "Destino turístico de la Carretera Austral.",
+        7,
+        640000,
+    ),
+    (
+        "Isla Damas",
+        "Región de Coquimbo",
+        "Destino turístico de Isla Damas.",
+        1,
+        38000,
+    ),
+)
 
 
 def inicializar_aplicacion():
@@ -76,6 +123,22 @@ def inicializar_aplicacion():
     paquetes = PaqueteServicio(paquete_repo, destino_repo)
     auth = AutenticacionServicio(cliente_repo)
     reservas = ReservaServicio(reserva_repo, paquete_repo)
+
+
+def cargar_destinos_iniciales():
+    for datos_destino in DESTINOS_INICIALES:
+        nombre = datos_destino[0]
+        if destino_repo.buscar_por_nombre(nombre) is None:
+            destino_repo.agregar(Destino(*datos_destino))
+
+
+def solicitar_margen_operacion():
+    margen_ingresado = input(
+        "Margen de operación (%) [20]: "
+    ).strip()
+    if not margen_ingresado:
+        return MARGEN_OPERACION_POR_DEFECTO
+    return Decimal(margen_ingresado) / Decimal("100")
 
 
 def cargar_configuracion_entorno_usuario():
@@ -168,6 +231,7 @@ def menu_admin(sesion):
                 mes_retorno = int(input("Mes regreso: "))
                 dia_retorno = int(input("Día regreso: "))
                 cupo = int(input("Cupo máximo: "))
+                margen = solicitar_margen_operacion()
 
                 paquetes.crear_paquete(
                     nombre,
@@ -175,6 +239,7 @@ def menu_admin(sesion):
                     date(anio_salida, mes_salida, dia_salida),
                     date(anio_retorno, mes_retorno, dia_retorno),
                     cupo,
+                    margen_operacion=margen,
                     sesion=sesion
                 )
                 print("Paquete creado.")
@@ -421,6 +486,7 @@ def main():
         return
     try:
         inicializar_aplicacion()
+        cargar_destinos_iniciales()
         asegurar_administrador_configurado()
     except RuntimeError:
         mostrar_error_configuracion()
