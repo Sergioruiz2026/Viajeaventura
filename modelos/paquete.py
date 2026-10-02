@@ -17,7 +17,8 @@ class Paquete:
         cupo_maximo,
         margen=0.20,
         precio_por_persona=None,
-        cupo_reservado_activo=0
+        cupo_reservado_activo=0,
+        id_paquete=None
     ):
         if len(destinos) < 2 or len(destinos) > 5:
             raise ValidacionError(
@@ -32,6 +33,7 @@ class Paquete:
             raise ValidacionError("El margen no puede ser negativo.")
 
         self.__nombre = nombre
+        self.__id = id_paquete
         self.__destinos = destinos
         self.__fecha_salida = fecha_salida
         self.__fecha_regreso = fecha_regreso
@@ -51,6 +53,10 @@ class Paquete:
     @property
     def nombre(self):
         return self.__nombre
+
+    @property
+    def id(self):
+        return self.__id
 
     @property
     def precio_por_persona(self):
@@ -95,7 +101,9 @@ class Paquete:
         return self.__fecha_salida <= (fecha_actual or date.today())
 
     def __str__(self):
+        identificador = f"#{self.__id} " if self.__id is not None else ""
         return (
-            f"{self.__nombre} - ${self.__precio_por_persona:,.0f} - "
+            f"{identificador}{self.__nombre} - "
+            f"${self.__precio_por_persona:,.0f} - "
             f"Cupos disponibles: {self.cupo_disponible} - {self.estado}"
         )

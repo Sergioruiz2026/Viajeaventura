@@ -267,6 +267,42 @@ class BaseDatos:
                     CHECK (estado IN ('ACTIVA', 'CANCELADA'))
             );
 
+                CREATE INDEX IF NOT EXISTS reservas_cliente_paquete_estado
+                    ON reservas(usuario_id, paquete_id, estado);
+
+                CREATE TRIGGER IF NOT EXISTS reserva_unica_activa_insert
+                BEFORE INSERT ON reservas
+                WHEN NEW.estado = 'ACTIVA'
+                 AND EXISTS (
+                     SELECT 1 FROM reservas
+                     WHERE usuario_id = NEW.usuario_id
+                       AND paquete_id = NEW.paquete_id
+                       AND estado = 'ACTIVA'
+                 )
+                BEGIN
+                    SELECT RAISE(
+                        ABORT,
+                        'Ya existe una reserva activa para este cliente y paquete.'
+                    );
+                END;
+
+                CREATE TRIGGER IF NOT EXISTS reserva_unica_activa_update
+                BEFORE UPDATE OF usuario_id, paquete_id, estado ON reservas
+                WHEN NEW.estado = 'ACTIVA'
+                 AND EXISTS (
+                     SELECT 1 FROM reservas
+                     WHERE usuario_id = NEW.usuario_id
+                       AND paquete_id = NEW.paquete_id
+                       AND estado = 'ACTIVA'
+                       AND id != OLD.id
+                 )
+                BEGIN
+                    SELECT RAISE(
+                        ABORT,
+                        'Ya existe una reserva activa para este cliente y paquete.'
+                    );
+                END;
+
             CREATE TRIGGER IF NOT EXISTS reserva_cupo_insert
             BEFORE INSERT ON reservas
             WHEN NEW.estado = 'ACTIVA'

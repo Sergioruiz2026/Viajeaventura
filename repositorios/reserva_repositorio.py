@@ -1,8 +1,9 @@
 """cracion de la clase reserva repositorio"""
 
+import sqlite3
 from datetime import datetime
 
-from excepciones import CupoInsuficienteError
+from excepciones import CupoInsuficienteError, ReservaNoPermitidaError
 from modelos.reserva import Reserva
 from repositorios.base_datos import BaseDatos
 from repositorios.cliente_repositorio import ClienteRepositorio
@@ -16,46 +17,87 @@ class ReservaRepositorio:
         self.__clientes = ClienteRepositorio(self.__base_datos)
         self.__paquetes = PaqueteRepositorio(self.__base_datos)
 
-    def agregar(self, reserva):
-        with self.__base_datos.transaccion() as conexion:
-            cliente = conexion.execute(
-                "SELECT id FROM usuarios WHERE correo = ?",
-                (reserva.cliente.correo,)
-            ).fetchone()
-            paquete = conexion.execute(
-                "SELECT id, cupo_maximo FROM paquetes WHERE nombre = ?",
-                (reserva.paquete.nombre,)
-            ).fetchone()
-            if cliente is None or paquete is None:
-                raise ValueError(
-                    "El usuario y el paquete deben existir en SQLite."
+    def agregar(self, reserva, paquete_id=None):
+        try:
+            with self.__base_datos.transaccion() as conexion:
+                cliente = conexion.execute(
+                    "SELECT id FROM usuarios WHERE correo = ?",
+                    (reserva.cliente.correo,)
+                ).fetchone()
+                if paquete_id is None:
+                    paquete = conexion.execute(
+                        "SELECT id, cupo_maximo FROM paquetes WHERE nombre = ?",
+                        (reserva.paquete.nombre,)
+                    ).fetchone()
+                else:
+                    paquete = conexion.execute(
+                        "SELECT id, cupo_maximo FROM paquetes WHERE id = ?",
+                        (paquete_id,)
+                    ).fetchone()
+                if cliente is None or paquete is None:
+                    raise ValueError(
+                        "El usuario y el paquete deben existir en SQLite."
+                    )
+
+                reserva_activa = conexion.execute(
+                    """
+                    SELECT 1 FROM reservas
+                    WHERE usuario_id = ? AND paquete_id = ?
+                      AND estado = 'ACTIVA'
+                    LIMIT 1
+                    """,
+                    (cliente["id"], paquete["id"])
+                ).fetchone()
+                if reserva_activa is not None:
+                    raise ReservaNoPermitidaError(
+                        "Ya tienes una reserva activa para este paquete."
+                    )
+
+                ocupados = conexion.execute(
+                    """
+                    SELECT COALESCE(SUM(cantidad_personas), 0)
+                    FROM reservas WHERE paquete_id = ? AND estado = 'ACTIVA'
+                    """,
+                    (paquete["id"],)
+                ).fetchone()[0]
+                disponibles = paquete["cupo_maximo"] - ocupados
+                if reserva.cantidad_personas > disponibles:
+                    raise CupoInsuficienteError(
+                        f"Solo quedan {disponibles} cupos."
+                    )
+                conexion.execute(
+                    """
+                    INSERT INTO reservas (
+                        usuario_id, paquete_id, cantidad_personas,
+                        fecha_emision, total
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        cliente["id"],
+                        paquete["id"],
+                        reserva.cantidad_personas,
+                        reserva.fecha_emision.isoformat(),
+                        int(reserva.total)
+                    )
                 )
-            ocupados = conexion.execute(
-                """
-                SELECT COALESCE(SUM(cantidad_personas), 0)
-                FROM reservas WHERE paquete_id = ? AND estado = 'ACTIVA'
-                """,
-                (paquete["id"],)
-            ).fetchone()[0]
-            if ocupados + reserva.cantidad_personas > paquete["cupo_maximo"]:
+        except sqlite3.IntegrityError as error:
+            detalle = str(error)
+            if "Ya existe una reserva activa" in detalle:
+                raise ReservaNoPermitidaError(
+                    "Ya tienes una reserva activa para este paquete."
+                ) from error
+            if (
+                "reservas.paquete_id" in detalle
+                and "reservas.usuario_id" in detalle
+            ):
+                raise ReservaNoPermitidaError(
+                    "Ya tienes una reserva activa para este paquete."
+                ) from error
+            if "Cupo máximo del paquete excedido" in detalle:
                 raise CupoInsuficienteError(
-                    f"Solo quedan {paquete['cupo_maximo'] - ocupados} cupos."
-                )
-            conexion.execute(
-                """
-                INSERT INTO reservas (
-                    usuario_id, paquete_id, cantidad_personas,
-                    fecha_emision, total
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    cliente["id"],
-                    paquete["id"],
-                    reserva.cantidad_personas,
-                    reserva.fecha_emision.isoformat(),
-                    int(reserva.total)
-                )
-            )
+                    "No hay cupos suficientes para esta reserva."
+                ) from error
+            raise
 
     def listar(self):
         filas = self.__conexion.execute(

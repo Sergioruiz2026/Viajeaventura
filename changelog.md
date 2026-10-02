@@ -1,5 +1,11 @@
 ### 2026-10-02
 
+- **Enlace al ancla:** [Autenticación y autorización](#2026-10-02)
+- **Prompt:** “Implementa el sistema de autenticación (RF-10), control de intentos (RNF-04) y autorización por roles (RF-13): usar un mensaje genérico para credenciales incorrectas; bloquear la cuenta durante 15 minutos tras cinco fallos consecutivos; expirar sesiones tras 30 minutos de inactividad; permitir gestión de destinos/paquetes solo a ADMIN y reservas/historial propio solo a CLIENTE autenticado.”
+- **Respuesta y acciones:** Unifiqué mensajes de login, persistí contador y vencimiento de bloqueo, añadí sesiones con expiración por inactividad y guards por rol en los servicios. Integré los guards a los menús y aprovisioné el administrador configurado por entorno como cuenta ADMIN para compartir el flujo de autenticación.
+- **Archivos modificados:** `excepciones.py`, `modelos/cliente.py`, `modelos/sesion.py`, `repositorios/cliente_repositorio.py`, `servicios/autenticacion_servicio.py`, `seguridad/autorizacion.py`, `servicios/catalogo_servicio.py`, `servicios/paquete_servicio.py`, `servicios/reserva_servicio.py`, `main.py`, `tests/test_autenticacion.py`, `tests/test_destinos.py`, `tests/test_paquetes.py` y `tests/test_persistencia.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (30 pruebas); Pylance no reportó errores en los archivos modificados.
+
 - **Enlace al ancla:** [Enmascaramiento de datos sensibles](#2026-10-02)
 - **Prompt:** “Sobre el código anterior, implementa RF-15: crea funciones `mask_rut()` (ej. `12.XXX.XXX-K`) y `mask_phone()` (ej. `+56 9 XXXX 1234`). Aplica en todos los GET y errores para nunca exponer datos en claro.”
 - **Respuesta y acciones:** Añadí ambas funciones y las conecté al filtro de logs, a los errores HTTP y a los mensajes de error de consola. La API actual no contiene rutas GET; no se creó un listado público de clientes.

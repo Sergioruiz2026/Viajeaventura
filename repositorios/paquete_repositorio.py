@@ -69,6 +69,13 @@ class PaqueteRepositorio:
         ).fetchone()
         return self.__desde_fila(fila) if fila else None
 
+    def buscar_por_id(self, paquete_id):
+        fila = self.__conexion.execute(
+            "SELECT * FROM paquetes WHERE id = ?",
+            (paquete_id,)
+        ).fetchone()
+        return self.__desde_fila(fila) if fila else None
+
     def eliminar(self, nombre):
         try:
             with self.__base_datos.transaccion() as conexion:
@@ -125,5 +132,6 @@ class PaqueteRepositorio:
             fila["cupo_maximo"],
             margen=fila["margen_operacion"],
             precio_por_persona=fila["precio_publicado"],
-            cupo_reservado_activo=ocupados
+            cupo_reservado_activo=ocupados,
+            id_paquete=fila["id"]
         )

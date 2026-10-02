@@ -162,11 +162,11 @@ def menu_cliente(sesion):
                     print(paquete)
 
             elif opcion == "2":
-                nombre_paquete = input("Nombre paquete: ")
+                paquete_id = int(input("ID paquete: "))
                 personas = int(input("Cantidad personas: "))
                 reserva = reservas.crear_reserva(
                     sesion,
-                    nombre_paquete,
+                    paquete_id,
                     personas
                 )
                 print("Reserva realizada.")

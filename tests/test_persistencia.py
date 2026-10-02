@@ -158,15 +158,19 @@ class PersistenciaSQLiteTests(unittest.TestCase):
             4,
             sesion=sesion_admin
         )
+        paquete_id = self.base_datos.conexion.execute(
+            "SELECT id FROM paquetes WHERE nombre = ?",
+            ("Ruta Chile",)
+        ).fetchone()["id"]
         servicio_reservas = ReservaServicio(reservas, paquetes)
         servicio_reservas.crear_reserva(
             sesion_cliente,
-            "Ruta Chile",
+            paquete_id,
             2
         )
         with self.assertRaises(AutorizacionError):
             servicio_reservas.crear_reserva(
-                sesion_admin, "Ruta Chile", 1
+                sesion_admin, paquete_id, 1
             )
         with self.assertRaises(AutorizacionError):
             servicio_reservas.reservas_cliente(sesion_admin)
@@ -238,17 +242,17 @@ class PersistenciaSQLiteTests(unittest.TestCase):
             salida + timedelta(days=4), 1,
             sesion=Sesion.administrador("admin")
         )
+        paquete_id = self.base_datos.conexion.execute(
+            "SELECT id FROM paquetes WHERE nombre = ?",
+            ("Cupo unitario",)
+        ).fetchone()["id"]
         ReservaServicio(
             ReservaRepositorio(self.base_datos), paquetes
-        ).crear_reserva(sesion_cliente, "Cupo unitario", 1)
+        ).crear_reserva(sesion_cliente, paquete_id, 1)
 
         usuario_id = self.base_datos.conexion.execute(
             "SELECT id FROM usuarios WHERE correo = ?",
             (sesion_cliente.correo,)
-        ).fetchone()["id"]
-        paquete_id = self.base_datos.conexion.execute(
-            "SELECT id FROM paquetes WHERE nombre = ?",
-            ("Cupo unitario",)
         ).fetchone()["id"]
         with self.assertRaises(sqlite3.IntegrityError):
             with self.base_datos.transaccion() as conexion:

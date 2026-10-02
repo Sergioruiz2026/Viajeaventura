@@ -16,7 +16,11 @@ class Reserva:
         fecha_emision=None,
         total=None
     ):
-        if cantidad_personas < 1:
+        if (
+            isinstance(cantidad_personas, bool)
+            or not isinstance(cantidad_personas, int)
+            or cantidad_personas < 1
+        ):
             raise ValidacionError(
                 "Debe reservar al menos una persona."
             )
