@@ -6,6 +6,12 @@
 - **Archivos modificados:** `README.md`, `main.py`, `modelos/destino.py`, `modelos/paquete.py`, `modelos/reserva.py`, `repositorios/base_datos.py`, `repositorios/cliente_repositorio.py`, `repositorios/destino_repositorio.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `seguridad/contraseñas.py`, `seguridad/logging_config.py`, `seguridad/montos.py`, `seguridad/seguridad.py`, `servicios/autenticacion_servicio.py`, `requirements.txt`, `tests/test_persistencia.py` y `tests/test_seguridad.py`.
 - **Validaciones:** `python -m unittest discover -s tests` pasó (8 pruebas); `git diff --check` pasó y Pylance no reportó errores en los archivos modificados.
 
+- **Enlace al ancla:** [Persistencia SQLite](#2026-10-02)
+- **Prompt:** “Diseña e implementa la capa de persistencia SQLite en `repository/db_setup.py` cumpliendo RNF-05 y RNF-09, con archivo local `app.db`, restricciones DDL para destinos, paquetes, usuarios y reservas, relación de 2 a 5 destinos, y transacciones atómicas `BEGIN IMMEDIATE / COMMIT / ROLLBACK` para los cupos.”
+- **Respuesta y acciones:** Añadí `repositorios/db_setup.py` con el esquema restringido, triggers y gestor transaccional; adapté los repositorios al esquema de usuarios y reservas y protegí los cupos dentro de la transacción. Incluí migración única desde `viajes_aventura.db`, conservando su origen y cifrando RUT/teléfono al importar.
+- **Archivos modificados:** `.gitignore`, `README.md`, `modelos/paquete.py`, `repositorios/base_datos.py`, `repositorios/db_setup.py`, `repositorios/cliente_repositorio.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `tests/test_persistencia.py` y `changelog.md`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (11 pruebas); Pylance no reportó errores y `git diff --check` pasó.
+
 ### 2026-09-29
 
 - **Prompt:** Configurar Gemini para actuar como agente IA local, analizar `main.py` y generar los cambios sin usar copilot y guardar los prompt en changelog.md de esta manera: ### AAAA-MM-DD; enlace al ancla; Prompt; Respuesta y acciones; Archivos modificados; Validaciones.

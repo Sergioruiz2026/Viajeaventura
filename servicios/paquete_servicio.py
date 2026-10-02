@@ -26,6 +26,10 @@ class PaqueteServicio:
                 raise ValidacionError(
                     f"Destino no encontrado: {nombre_destino}"
                 )
+            if not destino.disponible:
+                raise ValidacionError(
+                    f"El destino '{nombre_destino}' no está disponible."
+                )
             destinos.append(destino)
 
         paquete = Paquete(

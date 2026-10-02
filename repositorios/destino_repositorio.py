@@ -15,8 +15,8 @@ class DestinoRepositorio:
 
     def agregar(self, destino):
         try:
-            with self.__conexion:
-                self.__conexion.execute(
+            with self.__base_datos.transaccion() as conexion:
+                conexion.execute(
                     """
                     INSERT INTO destinos (
                         nombre, zona, descripcion, duracion_dias,
@@ -51,15 +51,50 @@ class DestinoRepositorio:
         return self.__desde_fila(fila) if fila else None
 
     def eliminar(self, nombre):
+        with self.__base_datos.transaccion() as conexion:
+            fila = conexion.execute(
+                "SELECT id FROM destinos WHERE nombre = ?",
+                (nombre,)
+            ).fetchone()
+            if fila is None:
+                return False
+            esta_asociado = conexion.execute(
+                "SELECT 1 FROM paquete_destinos WHERE destino_id = ? LIMIT 1",
+                (fila["id"],)
+            ).fetchone()
+            if esta_asociado:
+                conexion.execute(
+                    "UPDATE destinos SET disponible = 0 WHERE id = ?",
+                    (fila["id"],)
+                )
+                return True
+            conexion.execute("DELETE FROM destinos WHERE id = ?", (fila["id"],))
+            return True
+
+    def actualizar(self, nombre_actual, destino):
         try:
-            with self.__conexion:
-                cursor = self.__conexion.execute(
-                    "DELETE FROM destinos WHERE nombre = ?",
-                    (nombre,)
+            with self.__base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
+                    """
+                    UPDATE destinos
+                    SET nombre = ?, zona = ?, descripcion = ?,
+                        duracion_dias = ?, costo_base = ?
+                    WHERE nombre = ?
+                    """,
+                    (
+                        destino.nombre,
+                        destino.zona,
+                        destino.descripcion,
+                        destino.duracion_dias,
+                        int(destino.costo_base),
+                        nombre_actual
+                    )
                 )
             return cursor.rowcount > 0
-        except sqlite3.IntegrityError:
-            return False
+        except sqlite3.IntegrityError as error:
+            raise DestinoDuplicadoError(
+                f"El destino '{destino.nombre}' ya existe."
+            ) from error
 
     @staticmethod
     def __desde_fila(fila):
