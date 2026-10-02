@@ -16,7 +16,8 @@ class Paquete:
         fecha_regreso,
         cupo_maximo,
         margen=0.20,
-        precio_por_persona=None
+        precio_por_persona=None,
+        cupo_reservado_activo=0
     ):
         if len(destinos) < 2 or len(destinos) > 5:
             raise ValidacionError(
@@ -35,6 +36,7 @@ class Paquete:
         self.__fecha_salida = fecha_salida
         self.__fecha_regreso = fecha_regreso
         self.__cupo_maximo = cupo_maximo
+        self.__cupo_reservado_activo = cupo_reservado_activo
         self.__margen = margen
         costo_total = sum(
             (a_decimal(destino.costo_base) for destino in destinos),
@@ -74,11 +76,26 @@ class Paquete:
     def cupo_maximo(self):
         return self.__cupo_maximo
 
+    @property
+    def cupo_reservado_activo(self):
+        return self.__cupo_reservado_activo
+
+    @property
+    def cupo_disponible(self):
+        return self.__cupo_maximo - self.__cupo_reservado_activo
+
+    @property
+    def estado(self):
+        return "Vencido" if self.esta_vencido() else "Vigente"
+
     def disponible(self, personas_reservadas):
         return self.__cupo_maximo - personas_reservadas
 
-    def esta_vencido(self):
-        return self.__fecha_salida < date.today()
+    def esta_vencido(self, fecha_actual=None):
+        return self.__fecha_salida <= (fecha_actual or date.today())
 
     def __str__(self):
-        return f"{self.__nombre} - ${self.__precio_por_persona:,.0f}"
+        return (
+            f"{self.__nombre} - ${self.__precio_por_persona:,.0f} - "
+            f"Cupos disponibles: {self.cupo_disponible} - {self.estado}"
+        )

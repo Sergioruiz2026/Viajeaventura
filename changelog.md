@@ -12,6 +12,12 @@
 - **Archivos modificados:** `.gitignore`, `README.md`, `modelos/paquete.py`, `repositorios/base_datos.py`, `repositorios/db_setup.py`, `repositorios/cliente_repositorio.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `tests/test_persistencia.py` y `changelog.md`.
 - **Validaciones:** `python -m unittest discover -s tests` pasó (11 pruebas); Pylance no reportó errores y `git diff --check` pasó.
 
+- **Enlace al ancla:** [Gestión de destinos](#2026-10-02)
+- **Prompt:** “Implementa RF-01, RF-02, RF-03 y RF-04 para gestionar destinos: registro con validación y nombres únicos sin distinguir mayúsculas, modificación sin alterar precios publicados, eliminación física o desactivación según sus relaciones, listado con estado y selección exclusiva de destinos disponibles para nuevos paquetes.”
+- **Respuesta y acciones:** Fortalecí la validación del modelo; añadí la modificación parametrizada y la eliminación física/desactivación condicional en el repositorio; incorporé la operación de modificación al servicio y rechacé destinos no disponibles al crear paquetes. Los paquetes publicados conservan su precio almacenado.
+- **Archivos modificados:** `modelos/destino.py`, `repositorios/destino_repositorio.py`, `servicios/catalogo_servicio.py`, `servicios/paquete_servicio.py` y `tests/test_destinos.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (14 pruebas); Pylance no reportó errores y `git diff --check` pasó.
+
 ### 2026-09-29
 
 - **Prompt:** Configurar Gemini para actuar como agente IA local, analizar `main.py` y generar los cambios sin usar copilot y guardar los prompt en changelog.md de esta manera: ### AAAA-MM-DD; enlace al ancla; Prompt; Respuesta y acciones; Archivos modificados; Validaciones.

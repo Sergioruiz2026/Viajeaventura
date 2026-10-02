@@ -108,6 +108,15 @@ class PaqueteRepositorio:
             if not fila_destino["disponible"]:
                 destino.marcar_no_disponible()
 
+        ocupados = self.__conexion.execute(
+            """
+            SELECT COALESCE(SUM(cantidad_personas), 0)
+            FROM reservas
+            WHERE paquete_id = ? AND estado = 'ACTIVA'
+            """,
+            (fila["id"],)
+        ).fetchone()[0]
+
         return Paquete(
             fila["nombre"],
             destinos,
@@ -115,5 +124,6 @@ class PaqueteRepositorio:
             date.fromisoformat(fila["fecha_regreso"]),
             fila["cupo_maximo"],
             margen=fila["margen_operacion"],
-            precio_por_persona=fila["precio_publicado"]
+            precio_por_persona=fila["precio_publicado"],
+            cupo_reservado_activo=ocupados
         )

@@ -50,6 +50,13 @@ class DestinoRepositorio:
         ).fetchone()
         return self.__desde_fila(fila) if fila else None
 
+    def buscar_por_id(self, destino_id):
+        fila = self.__conexion.execute(
+            "SELECT * FROM destinos WHERE id = ?",
+            (destino_id,)
+        ).fetchone()
+        return self.__desde_fila(fila) if fila else None
+
     def eliminar(self, nombre):
         with self.__base_datos.transaccion() as conexion:
             fila = conexion.execute(
