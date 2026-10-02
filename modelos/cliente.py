@@ -1,5 +1,7 @@
 """" implementacion de la clase Cliente para el proyecto ViajesAventura"""
 
+from seguridad.enmascarado import mask_phone, mask_rut
+
 class Cliente:
     def __init__(self,
         nombre,
@@ -47,4 +49,8 @@ class Cliente:
         return self.__telefono
 
     def __str__(self):
-        return f"Cliente: {self.__nombre} ({self.__correo})"
+        return (
+            f"Cliente: {self.__nombre} ({self.__correo}) | "
+            f"RUT: {mask_rut(self.__rut)} | "
+            f"Teléfono: {mask_phone(self.__telefono)}"
+        )

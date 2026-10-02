@@ -1,7 +1,9 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
 import getpass
+import logging
 import os
+import traceback
 
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
@@ -24,32 +26,55 @@ from excepciones import (
 from seguridad.validadores import Validador
 from seguridad.logging_config import configurar_logging, enmascarar_texto
 from repositorios.base_datos import BaseDatos
+from seguridad.enmascarado import mask_phone, mask_rut
+
+
+MENSAJE_ERROR_INESPERADO = (
+    "Ocurrió un error inesperado al procesar su solicitud. "
+    "Por favor intente nuevamente."
+)
+logger = logging.getLogger(__name__)
 
 
 # ==========================
 # INICIALIZACIÓN
 # ==========================
 
-destino_repo = DestinoRepositorio()
-base_datos = BaseDatos()
-destino_repo = DestinoRepositorio(base_datos)
-paquete_repo = PaqueteRepositorio(base_datos)
-cliente_repo = ClienteRepositorio(base_datos)
-reserva_repo = ReservaRepositorio(base_datos)
-
-catalogo = CatalogoServicio(destino_repo)
-paquetes = PaqueteServicio(
-    paquete_repo,
-    destino_repo
-)
-auth = AutenticacionServicio(cliente_repo)
-reservas = ReservaServicio(
-    reserva_repo,
-    paquete_repo
-)
+base_datos: BaseDatos
+destino_repo: DestinoRepositorio
+paquete_repo: PaqueteRepositorio
+cliente_repo: ClienteRepositorio
+reserva_repo: ReservaRepositorio
+catalogo: CatalogoServicio
+paquetes: PaqueteServicio
+auth: AutenticacionServicio
+reservas: ReservaServicio
 
 ADMIN_USUARIO = os.environ.get("VIAJES_ADMIN_USUARIO", "admin")
 ADMIN_PASSWORD = os.environ.get("VIAJES_ADMIN_PASSWORD")
+
+
+def inicializar_aplicacion():
+    global auth, base_datos, catalogo, cliente_repo, destino_repo
+    global paquetes, paquete_repo, reserva_repo, reservas
+
+    base_datos = BaseDatos()
+    destino_repo = DestinoRepositorio(base_datos)
+    paquete_repo = PaqueteRepositorio(base_datos)
+    cliente_repo = ClienteRepositorio(base_datos)
+    reserva_repo = ReservaRepositorio(base_datos)
+    catalogo = CatalogoServicio(destino_repo)
+    paquetes = PaqueteServicio(paquete_repo, destino_repo)
+    auth = AutenticacionServicio(cliente_repo)
+    reservas = ReservaServicio(reserva_repo, paquete_repo)
+
+
+def mostrar_error_inesperado():
+    logger.error(
+        "Error técnico en la interfaz de consola:\n%s",
+        traceback.format_exc()
+    )
+    print(MENSAJE_ERROR_INESPERADO)
 
 
 # ==========================
@@ -137,7 +162,7 @@ def menu_admin(sesion):
         except ViajesAventuraError as error:
             print(f"Error: {enmascarar_texto(str(error))}")
         except (ValueError, InvalidOperation) as error:
-            print(f"Dato inválido: {enmascarar_texto(str(error))}")
+            print("Dato inválido. Revise el valor e intente nuevamente.")
 
 
 # ==========================
@@ -146,7 +171,7 @@ def menu_admin(sesion):
 
 def menu_cliente(sesion):
     while True:
-        print(f"\n===== BIENVENIDO {sesion.nombre} =====")
+        print(f"\n===== MENÚ CLIENTE: {sesion.nombre} =====")
         print("1. Ver paquetes")
         print("2. Reservar paquete")
         print("3. Mis reservas")
@@ -197,7 +222,7 @@ def menu_cliente(sesion):
         except ViajesAventuraError as error:
             print(f"Error: {enmascarar_texto(str(error))}")
         except ValueError as error:
-            print(f"Dato inválido: {enmascarar_texto(str(error))}")
+            print("Dato inválido. Revise el valor e intente nuevamente.")
 
 
 # ==========================
@@ -345,30 +370,47 @@ def asegurar_administrador_configurado():
 # MENÚ PRINCIPAL
 # ==========================
 
-def main():
-    asegurar_administrador_configurado()
-    configurar_logging()
-    while True:
-        print("\n======================")
-        print(" VIAJES AVENTURA ")
-        print("======================")
-        print("1. Registrar cliente")
-        print("2. Iniciar sesión cliente")
-        print("3. Iniciar sesión admin")
-        print("0. Salir")
+def menu_invitado():
+    print("\n===== MENÚ INVITADO =====")
+    print("1. Registrar cliente")
+    print("2. Iniciar sesión cliente")
+    print("3. Iniciar sesión administrador")
+    print("0. Salir")
+    return input("Seleccione: ")
 
-        opcion = input("Seleccione: ")
-        if opcion == "1":
-            registrar_cliente()
-        elif opcion == "2":
-            login_cliente()
-        elif opcion == "3":
-            login_admin()
-        elif opcion == "0":
+
+def main():
+    try:
+        configurar_logging()
+    except Exception:
+        print(MENSAJE_ERROR_INESPERADO)
+        return
+    try:
+        inicializar_aplicacion()
+        asegurar_administrador_configurado()
+    except Exception:
+        mostrar_error_inesperado()
+        return
+
+    while True:
+        try:
+            opcion = menu_invitado()
+            if opcion == "1":
+                registrar_cliente()
+            elif opcion == "2":
+                login_cliente()
+            elif opcion == "3":
+                login_admin()
+            elif opcion == "0":
+                print("Hasta pronto.")
+                break
+            else:
+                print("Opción inválida.")
+        except EOFError:
             print("Hasta pronto.")
             break
-        else:
-            print("Opción inválida.")
+        except Exception:
+            mostrar_error_inesperado()
 
 
 if __name__ == "__main__":

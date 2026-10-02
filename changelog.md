@@ -6,6 +6,12 @@
 - **Archivos modificados:** `modelos/paquete.py`, `modelos/reserva.py`, `repositorios/db_setup.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `servicios/reserva_servicio.py`, `main.py`, `tests/test_persistencia.py` y `tests/test_reservas.py`.
 - **Validaciones:** `python -m unittest discover -s tests` pasó (34 pruebas); Pylance no reportó errores en los archivos modificados.
 
+- **Enlace al ancla:** [Historial y cancelación de reservas](#2026-10-02)
+- **Prompt:** “Implementa RF-12 y RF-16: permitir al cliente autenticado consultar solo sus reservas mediante el `usuario_id` de sesión; permitir cancelar una reserva propia ACTIVA solo si la salida aún es futura; cambiar su estado a CANCELADA, liberar cupo y conservar el total.”
+- **Respuesta y acciones:** Cambié el filtro del historial a `usuario_id`, añadí IDs y estados visibles, implementé cancelación con verificación transaccional de propiedad, estado y fecha, y agregué la opción al menú del cliente. La cancelación no modifica el total y las reservas canceladas dejan de retener cupo.
+- **Archivos modificados:** `modelos/cliente.py`, `modelos/reserva.py`, `repositorios/cliente_repositorio.py`, `repositorios/reserva_repositorio.py`, `servicios/reserva_servicio.py`, `main.py`, `tests/test_persistencia.py` y `tests/test_reservas.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (36 pruebas); Pylance no reportó errores en los archivos modificados.
+
 - **Enlace al ancla:** [Autenticación y autorización](#2026-10-02)
 - **Prompt:** “Implementa el sistema de autenticación (RF-10), control de intentos (RNF-04) y autorización por roles (RF-13): usar un mensaje genérico para credenciales incorrectas; bloquear la cuenta durante 15 minutos tras cinco fallos consecutivos; expirar sesiones tras 30 minutos de inactividad; permitir gestión de destinos/paquetes solo a ADMIN y reservas/historial propio solo a CLIENTE autenticado.”
 - **Respuesta y acciones:** Unifiqué mensajes de login, persistí contador y vencimiento de bloqueo, añadí sesiones con expiración por inactividad y guards por rol en los servicios. Integré los guards a los menús y aprovisioné el administrador configurado por entorno como cuenta ADMIN para compartir el flujo de autenticación.
