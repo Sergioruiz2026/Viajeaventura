@@ -1,5 +1,35 @@
 ### 2026-10-02
 
+- **Prompt:** “dejemos la que está funcional y eliminemos la otra”
+- **Respuesta y acciones:** Conservé `app.db` como base activa y eliminé la base antigua `viajes_aventura.db`. Actualicé la documentación para reflejar que solo se utiliza la base SQLite activa.
+- **Archivos modificados:** `README.md`, `changelog.md`; eliminado `viajes_aventura.db`.
+- **Validaciones:** Se verificó que `app.db` existía antes de eliminar la base antigua y que `app.db` continúa presente después de la eliminación (60 KB).
+
+- **Prompt:** “que base de datos estamos ocupando”
+- **Respuesta y acciones:** Confirmé que la aplicación utiliza SQLite mediante `sqlite3`. La ruta predeterminada es `app.db` en la raíz del proyecto; puede cambiarse con `VIAJES_DB_PATH`. Si existe la base antigua `viajes_aventura.db`, se migra una vez al esquema nuevo.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Revisión de `repositorios/db_setup.py`, `README.md` y referencias a `sqlite3`.
+
+- **Prompt:** “ahora si paso”.
+- **Respuesta y acciones:** Confirmé que el registro de cliente funciona correctamente después de cargar automáticamente `VIAJES_FERNET_KEY` desde las variables de usuario de Windows.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Confirmación funcional del usuario: el registro se completó correctamente.
+
+- **Prompt:** “Al confirmar la contraseña vuelve a aparecer el error de configuración de `VIAJES_FERNET_KEY`.”
+- **Respuesta y acciones:** Añadí una recuperación segura de `VIAJES_FERNET_KEY` desde las variables de usuario de Windows cuando la terminal no la heredó. La clave no se escribe en el código ni se muestra en pantalla.
+- **Archivos modificados:** `main.py`, `README.md`, `tests/test_configuracion_consola.py`, `changelog.md`.
+- **Validaciones:** Con la variable ausente en la sesión, la aplicación recuperó la clave de usuario de Windows y `_fernet()` la validó correctamente; `pytest -q` pasó (42 pruebas, 14 subtests), con 3 advertencias deprecadas de dependencias.
+
+- **Prompt:** “Al registrar un cliente, la aplicación indica que no está configurada para proteger los datos sensibles.”
+- **Respuesta y acciones:** Verifiqué que `VIAJES_FERNET_KEY` está configurada como variable de usuario de Windows y que su valor es una clave Fernet válida, pero no está presente en la sesión actual de PowerShell. No se modificó el código ni se expuso la clave.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Se comprobó la ausencia de la variable en la sesión actual, su existencia como variable de usuario y su validez mediante `seguridad.seguridad._fernet()`.
+
+- **Prompt:** “Correo: ruiz2006@gmail.com; teléfono 997131557; al registrar un cliente aparece ‘Ocurrió un error inesperado al procesar su solicitud’.”
+- **Respuesta y acciones:** Revisé la traza de `app.log` y confirmé que faltaba `VIAJES_FERNET_KEY`. La consola ahora informa explícitamente que debe definirse esa variable, registra la traza técnica sin mostrarla al usuario y documenta la configuración.
+- **Archivos modificados:** `main.py`, `README.md`, `tests/test_configuracion_consola.py`, `changelog.md`.
+- **Validaciones:** `pytest -q tests/test_configuracion_consola.py tests/test_presentacion.py` pasó (4 pruebas); `pytest -q` pasó (42 pruebas, 14 subtests), con 3 advertencias deprecadas de dependencias.
+
 - **Enlace al ancla:** [Suite automatizada con pytest](#2026-10-02)
 - **Prompt:** “Crea la suite de pruebas automatizadas con `pytest` para verificar las reglas RNF-08: al menos 27 pruebas unitarias e integrales para destinos, paquetes, autenticación y reservas, incluyendo concurrencia de cupos, doble reserva y liberación tras cancelar; configura la base de pruebas en memoria (`:memory:`).”
 - **Respuesta y acciones:** Configuré la recolección de `pytest`, añadí la dependencia y un fixture SQLite en memoria. Incorporé una prueba concurrente con conexiones independientes y base temporal para verificar que un cupo no se sobreasigne; las pruebas existentes se descubren junto con las nuevas.

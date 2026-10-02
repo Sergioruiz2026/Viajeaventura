@@ -5,6 +5,11 @@ import logging
 import os
 import traceback
 
+if os.name == "nt":
+    import winreg
+else:
+    winreg = None
+
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
 from repositorios.cliente_repositorio import ClienteRepositorio
@@ -32,6 +37,10 @@ from seguridad.enmascarado import mask_phone, mask_rut
 MENSAJE_ERROR_INESPERADO = (
     "Ocurrió un error inesperado al procesar su solicitud. "
     "Por favor intente nuevamente."
+)
+MENSAJE_ERROR_CONFIGURACION = (
+    "La aplicación no está configurada para proteger los datos sensibles. "
+    "Defina VIAJES_FERNET_KEY y vuelva a intentarlo."
 )
 logger = logging.getLogger(__name__)
 
@@ -69,12 +78,43 @@ def inicializar_aplicacion():
     reservas = ReservaServicio(reserva_repo, paquete_repo)
 
 
+def cargar_configuracion_entorno_usuario():
+    """Carga la clave de usuario en Windows si la terminal no la heredó."""
+    if os.environ.get("VIAJES_FERNET_KEY") or os.name != "nt":
+        return
+
+    try:
+        if winreg is None:
+            return
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Environment"
+        ) as clave_usuario:
+            clave_fernet, _ = winreg.QueryValueEx(
+                clave_usuario,
+                "VIAJES_FERNET_KEY"
+            )
+    except (FileNotFoundError, OSError):
+        return
+
+    if isinstance(clave_fernet, str) and clave_fernet.strip():
+        os.environ["VIAJES_FERNET_KEY"] = clave_fernet.strip()
+
+
 def mostrar_error_inesperado():
     logger.error(
         "Error técnico en la interfaz de consola:\n%s",
         traceback.format_exc()
     )
     print(MENSAJE_ERROR_INESPERADO)
+
+
+def mostrar_error_configuracion():
+    logger.error(
+        "Error de configuración de seguridad en la interfaz de consola:\n%s",
+        traceback.format_exc()
+    )
+    print(MENSAJE_ERROR_CONFIGURACION)
 
 
 # ==========================
@@ -303,6 +343,8 @@ def registrar_cliente():
         print("Cliente registrado correctamente.")
     except ViajesAventuraError as error:
         print(f"Error: {enmascarar_texto(str(error))}")
+    except RuntimeError:
+        mostrar_error_configuracion()
 
 
 # ==========================
@@ -370,16 +412,8 @@ def asegurar_administrador_configurado():
 # MENÚ PRINCIPAL
 # ==========================
 
-def menu_invitado():
-    print("\n===== MENÚ INVITADO =====")
-    print("1. Registrar cliente")
-    print("2. Iniciar sesión cliente")
-    print("3. Iniciar sesión administrador")
-    print("0. Salir")
-    return input("Seleccione: ")
-
-
 def main():
+    cargar_configuracion_entorno_usuario()
     try:
         configurar_logging()
     except Exception:
@@ -388,13 +422,24 @@ def main():
     try:
         inicializar_aplicacion()
         asegurar_administrador_configurado()
+    except RuntimeError:
+        mostrar_error_configuracion()
+        return
     except Exception:
         mostrar_error_inesperado()
         return
 
     while True:
         try:
-            opcion = menu_invitado()
+            print("\n======================")
+            print(" VIAJES AVENTURA ")
+            print("======================")
+            print("1. Registrar cliente")
+            print("2. Iniciar sesión cliente")
+            print("3. Iniciar sesión admin")
+            print("0. Salir")
+
+            opcion = input("Seleccione: ")
             if opcion == "1":
                 registrar_cliente()
             elif opcion == "2":

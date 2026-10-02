@@ -23,6 +23,11 @@ La clave debe conservarse entre ejecuciones y respaldarse por separado de la
 base de datos. Si se pierde o cambia, los datos cifrados existentes no podrán
 descifrarse. Los eventos de logging se escriben en `app.log` y el filtro
 enmascara RUT, teléfonos y valores asociados a etiquetas de credenciales.
+Si la variable no está definida o contiene una clave inválida, la consola
+mostrará un error de configuración y no intentará registrar datos sensibles.
+En Windows, la aplicación también recupera la variable de usuario si la
+terminal actual no la heredó; una clave nueva puede requerir reiniciar la
+aplicación.
 
 ## Ejecución
 
@@ -34,8 +39,7 @@ $env:VIAJES_ADMIN_PASSWORD = "define-una-clave-segura"
 python main.py
 ```
 
-Los destinos, paquetes, clientes y reservas se almacenan en memoria y se pierden al cerrar la aplicación.
-Los destinos, paquetes, usuarios y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones. Si solo existe la base anterior `viajes_aventura.db`, sus datos se copian una vez al nuevo esquema; el archivo anterior se conserva.
+Los destinos, paquetes, clientes y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones.
 
 ## API de registro
 

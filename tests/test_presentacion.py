@@ -20,16 +20,22 @@ class PresentacionConsolaTests(unittest.TestCase):
         self.assertNotIn("12.345.678-5", representacion)
         self.assertNotIn("+56912345678", representacion)
 
-    def test_menu_invitado_muestra_opciones_numeradas(self):
+    def test_menu_principal_original_muestra_opciones_numeradas(self):
         salida = io.StringIO()
-        with patch("builtins.input", return_value="0"), redirect_stdout(salida):
-            opcion = main.menu_invitado()
+        with (
+            patch.object(main, "configurar_logging"),
+            patch.object(main, "inicializar_aplicacion"),
+            patch.object(main, "asegurar_administrador_configurado"),
+            patch("builtins.input", return_value="0"),
+            redirect_stdout(salida)
+        ):
+            main.main()
 
-        self.assertEqual(opcion, "0")
-        self.assertIn("MENÚ INVITADO", salida.getvalue())
+        self.assertIn("VIAJES AVENTURA", salida.getvalue())
+        self.assertNotIn("MENÚ INVITADO", salida.getvalue())
         self.assertIn("1. Registrar cliente", salida.getvalue())
         self.assertIn("2. Iniciar sesión cliente", salida.getvalue())
-        self.assertIn("3. Iniciar sesión administrador", salida.getvalue())
+        self.assertIn("3. Iniciar sesión admin", salida.getvalue())
 
     def test_error_tecnico_muestra_mensaje_generico_y_registra_traza(self):
         salida = io.StringIO()
