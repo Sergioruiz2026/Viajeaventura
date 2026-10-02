@@ -12,6 +12,12 @@
 - **Archivos modificados:** `modelos/cliente.py`, `modelos/reserva.py`, `repositorios/cliente_repositorio.py`, `repositorios/reserva_repositorio.py`, `servicios/reserva_servicio.py`, `main.py`, `tests/test_persistencia.py` y `tests/test_reservas.py`.
 - **Validaciones:** `python -m unittest discover -s tests` pasó (36 pruebas); Pylance no reportó errores en los archivos modificados.
 
+- **Enlace al ancla:** [Presentación de consola](#2026-10-02)
+- **Prompt:** “Crea la capa de presentación por consola cumpliendo RNF-07 y RNF-08: menús numerados en español para ADMIN, CLIENTE e invitado; mostrar RUT y teléfono enmascarados; capturar errores técnicos, registrar su traza completa en `app.log` y mostrar al usuario un mensaje genérico sin stacktrace.”
+- **Respuesta y acciones:** Añadí un menú invitado explícito, trasladé la inicialización al flujo controlado de consola, centralicé la captura de errores técnicos para registrar la traza y mostrar un mensaje genérico, y enmascaré RUT/teléfono al representar clientes.
+- **Archivos modificados:** `main.py`, `modelos/cliente.py`, `tests/test_presentacion.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (39 pruebas); Pylance no reportó errores en los archivos modificados.
+
 - **Enlace al ancla:** [Autenticación y autorización](#2026-10-02)
 - **Prompt:** “Implementa el sistema de autenticación (RF-10), control de intentos (RNF-04) y autorización por roles (RF-13): usar un mensaje genérico para credenciales incorrectas; bloquear la cuenta durante 15 minutos tras cinco fallos consecutivos; expirar sesiones tras 30 minutos de inactividad; permitir gestión de destinos/paquetes solo a ADMIN y reservas/historial propio solo a CLIENTE autenticado.”
 - **Respuesta y acciones:** Unifiqué mensajes de login, persistí contador y vencimiento de bloqueo, añadí sesiones con expiración por inactividad y guards por rol en los servicios. Integré los guards a los menús y aprovisioné el administrador configurado por entorno como cuenta ADMIN para compartir el flujo de autenticación.
