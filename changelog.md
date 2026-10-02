@@ -44,3 +44,11 @@
 - **Respuesta y acciones:** Revisé `reserva_repositorio.py` y sus modelos y servicios relacionados. Identifiqué errores de sintaxis, imports incompatibles con la estructura de carpetas, riesgo por credenciales y ambigüedad de paquetes duplicados; en esta revisión no modifiqué archivos.
 - **Archivos modificados:** Ninguno.
 - **Validaciones:** Reproduje el error de cadena sin terminar del repositorio y ejecuté `compileall`, que señaló errores sintácticos en el proyecto.
+- **Validaciones:** Reproduje el error de cadena sin terminar del repositorio y ejecuté `compileall`, que señaló errores sintácticos en el proyecto.
+
+---
+
+- **Prompt:** “para guardar la informacion vamos a utilizar sqlite3 para gestionar la base de datos tanto mantener informacion de la empresa, registro de los clientes”
+- **Respuesta y acciones:** Añadí una base SQLite compartida para destinos, clientes, paquetes y reservas; conservé hashes de contraseña y relaciones entre paquetes y destinos. Documenté la ubicación configurable de la base y añadí una prueba de persistencia tras cerrar y reabrirla.
+- **Archivos modificados:** `.gitignore`, `README.md`, `main.py`, `modelos/destino.py`, `modelos/paquete.py`, `modelos/reserva.py`, `repositorios/base_datos.py`, `repositorios/cliente_repositorio.py`, `repositorios/destino_repositorio.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py` y `tests/test_persistencia.py`.
+- **Validaciones:** `python -B -m unittest discover -s tests -v` pasó (1 prueba); los 20 archivos Python pasaron análisis sintáctico; `main.py` creó el esquema con ruta temporal; `git diff --check` pasó.

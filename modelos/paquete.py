@@ -14,7 +14,8 @@ class Paquete:
         fecha_salida,
         fecha_regreso,
         cupo_maximo,
-        margen=0.20
+        margen=0.20,
+        precio_por_persona=None
     ):
         if len(destinos) < 2 or len(destinos) > 5:
             raise ValidacionError(
@@ -33,7 +34,11 @@ class Paquete:
         self.__fecha_regreso = fecha_regreso
         self.__cupo_maximo = cupo_maximo
         costo_total = sum(destino.costo_base for destino in destinos)
-        self.__precio_por_persona = costo_total * (1 + margen)
+        self.__precio_por_persona = (
+            costo_total * (1 + margen)
+            if precio_por_persona is None
+            else precio_por_persona
+        )
 
     @property
     def nombre(self):
@@ -46,6 +51,14 @@ class Paquete:
     @property
     def fecha_salida(self):
         return self.__fecha_salida
+
+    @property
+    def fecha_regreso(self):
+        return self.__fecha_regreso
+
+    @property
+    def destinos(self):
+        return self.__destinos.copy()
 
     @property
     def cupo_maximo(self):

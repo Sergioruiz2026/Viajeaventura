@@ -24,6 +24,18 @@ class Destino:
         return self.__nombre
 
     @property
+    def zona(self):
+        return self.__zona
+
+    @property
+    def descripcion(self):
+        return self.__descripcion
+
+    @property
+    def duracion_dias(self):
+        return self.__duracion_dias
+
+    @property
     def costo_base(self):
         return self.__costo_base
 

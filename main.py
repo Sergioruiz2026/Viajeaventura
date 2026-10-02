@@ -1,6 +1,6 @@
 from datetime import date
+import getpass
 import os
-from datetime import date
 
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
@@ -12,7 +12,9 @@ from servicios.paquete_servicio import PaqueteServicio
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.reserva_servicio import ReservaServicio
 
-from excepciones import ViajesAventuraError
+from excepciones import ValidacionError, ViajesAventuraError
+from seguridad.validadores import Validador
+from repositorios.base_datos import BaseDatos
 
 
 # ==========================
@@ -20,9 +22,11 @@ from excepciones import ViajesAventuraError
 # ==========================
 
 destino_repo = DestinoRepositorio()
-paquete_repo = PaqueteRepositorio()
-cliente_repo = ClienteRepositorio()
-reserva_repo = ReservaRepositorio()
+base_datos = BaseDatos()
+destino_repo = DestinoRepositorio(base_datos)
+paquete_repo = PaqueteRepositorio(base_datos)
+cliente_repo = ClienteRepositorio(base_datos)
+reserva_repo = ReservaRepositorio(base_datos)
 
 catalogo = CatalogoServicio(destino_repo)
 paquetes = PaqueteServicio(
@@ -179,13 +183,63 @@ def menu_cliente(cliente):
 # REGISTRO CLIENTE
 # ==========================
 
+def solicitar_dato(prompt, validar, comprobar_disponibilidad=None):
+    while True:
+        valor = input(prompt).strip()
+        try:
+            validar(valor)
+            if comprobar_disponibilidad is not None:
+                comprobar_disponibilidad(valor)
+            return valor
+        except ViajesAventuraError as error:
+            print(f"Error: {error}. Ingrese nuevamente este dato.")
+
+
+def validar_correo_disponible(correo):
+    if cliente_repo.buscar_por_correo(correo):
+        raise ValidacionError("Ya existe un cliente con ese correo.")
+
+
+def solicitar_contrasena():
+    while True:
+        mostrar = input(
+            "¿Mostrar la contraseña mientras la escribe? (s/N): "
+        ).strip().lower()
+        if mostrar not in ("s", "n", ""):
+            print("Responda s o n.")
+            continue
+        break
+
+    leer_contrasena = input if mostrar == "s" else getpass.getpass
+    while True:
+        password = leer_contrasena("Contraseña: ")
+        try:
+            Validador.validar_contrasena(password)
+        except ViajesAventuraError as error:
+            print(f"Error: {error}. Ingrese nuevamente la contraseña.")
+            continue
+
+        confirmacion = leer_contrasena("Confirme la contraseña: ")
+        if password != confirmacion:
+            print("Las contraseñas no coinciden. Inténtelo nuevamente.")
+            continue
+        return password
+
+
 def registrar_cliente():
     try:
-        nombre = input("Nombre: ")
-        rut = input("RUT: ")
-        correo = input("Correo: ")
-        telefono = input("Teléfono: ")
-        password = input("Contraseña: ")
+        nombre = solicitar_dato("Nombre: ", Validador.validar_nombre)
+        rut = solicitar_dato("RUT: ", Validador.validar_rut)
+        correo = solicitar_dato(
+            "Correo: ",
+            Validador.validar_correo,
+            validar_correo_disponible
+        )
+        telefono = solicitar_dato(
+            "Teléfono: ",
+            Validador.validar_telefono
+        )
+        password = solicitar_contrasena()
 
         auth.registrar_cliente(
             nombre,
@@ -206,7 +260,7 @@ def registrar_cliente():
 def login_cliente():
     try:
         correo = input("Correo: ")
-        password = input("Contraseña: ")
+        password = getpass.getpass("Contraseña: ")
         cliente = auth.iniciar_sesion(correo, password)
         menu_cliente(cliente)
     except ViajesAventuraError as error:
@@ -219,7 +273,7 @@ def login_cliente():
 
 def login_admin():
     usuario = input("Usuario: ")
-    password = input("Contraseña: ")
+    password = getpass.getpass("Contraseña: ")
 
     if ADMIN_PASSWORD is None:
         print("Credenciales de administrador no configuradas.")

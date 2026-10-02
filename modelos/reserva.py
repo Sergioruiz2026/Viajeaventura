@@ -7,7 +7,14 @@ from excepciones import ValidacionError
 
 class Reserva:
 
-    def __init__(self, cliente, paquete, cantidad_personas):
+    def __init__(
+        self,
+        cliente,
+        paquete,
+        cantidad_personas,
+        fecha_emision=None,
+        total=None
+    ):
         if cantidad_personas < 1:
             raise ValidacionError(
                 "Debe reservar al menos una persona."
@@ -16,8 +23,12 @@ class Reserva:
         self.__cliente = cliente
         self.__paquete = paquete
         self.__cantidad_personas = cantidad_personas
-        self.__fecha_emision = datetime.now()
-        self.__total = paquete.precio_por_persona * cantidad_personas
+        self.__fecha_emision = fecha_emision or datetime.now()
+        self.__total = (
+            paquete.precio_por_persona * cantidad_personas
+            if total is None
+            else total
+        )
 
     @property
     def cliente(self):
