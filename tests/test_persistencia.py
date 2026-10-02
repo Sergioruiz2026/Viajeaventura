@@ -1,6 +1,7 @@
 import hashlib
 import os
 import secrets
+import sqlite3
 import tempfile
 import unittest
 from datetime import date, timedelta
@@ -46,7 +47,7 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         )
 
         fila = self.base_datos.conexion.execute(
-            "SELECT rut, telefono FROM clientes WHERE correo = ?",
+            "SELECT rut, telefono FROM usuarios WHERE correo = ?",
             (cliente.correo,)
         ).fetchone()
 
@@ -58,7 +59,7 @@ class PersistenciaSQLiteTests(unittest.TestCase):
     def test_migra_rut_y_telefono_heredados_en_texto_claro(self):
         self.base_datos.conexion.execute(
             """
-            INSERT INTO clientes (
+            INSERT INTO usuarios (
                 nombre, rut, correo, telefono, password_hash
             ) VALUES (?, ?, ?, ?, ?)
             """,
@@ -68,7 +69,7 @@ class PersistenciaSQLiteTests(unittest.TestCase):
 
         clientes = ClienteRepositorio(self.base_datos)
         fila = self.base_datos.conexion.execute(
-            "SELECT rut, telefono FROM clientes"
+            "SELECT rut, telefono FROM usuarios"
         ).fetchone()
 
         self.assertNotEqual(fila["rut"], "12345678-9")
@@ -92,7 +93,7 @@ class PersistenciaSQLiteTests(unittest.TestCase):
             "ana@example.com", password
         )
         hash_guardado = self.base_datos.conexion.execute(
-            "SELECT password_hash FROM clientes WHERE correo = ?",
+            "SELECT password_hash FROM usuarios WHERE correo = ?",
             (cliente.correo,)
         ).fetchone()["password_hash"]
 
@@ -153,6 +154,150 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         self.assertEqual(reservas_guardadas[0].cantidad_personas, 2)
         self.assertEqual(reservas_guardadas[0].total, 720)
         self.assertEqual(reservas.cupos_ocupados("Ruta Chile"), 2)
+
+    def test_constraints_sql_relacion_y_cupo_transaccional(self):
+        with self.assertRaises(sqlite3.IntegrityError):
+            with self.base_datos.transaccion() as conexion:
+                conexion.execute(
+                    """
+                    INSERT INTO destinos (
+                        nombre, zona, descripcion, duracion_dias, costo_base
+                    ) VALUES ('Inválido', 'Norte', 'Descripción', 0, 100)
+                    """
+                )
+        self.assertEqual(
+            self.base_datos.conexion.execute(
+                "SELECT COUNT(*) FROM destinos"
+            ).fetchone()[0],
+            0
+        )
+
+        clientes = ClienteRepositorio(self.base_datos)
+        cliente = AutenticacionServicio(clientes).registrar_cliente(
+            "Ana", "12345678-9", "ana@example.com", "+56912345678",
+            "ClaveFuerte1"
+        )
+        destinos = DestinoRepositorio(self.base_datos)
+        destinos.agregar(Destino("Norte", "Norte", "Desierto", 4, 100))
+        destinos.agregar(Destino("Sur", "Sur", "Lagos", 5, 200))
+        paquetes = PaqueteRepositorio(self.base_datos)
+        salida = date.today() + timedelta(days=30)
+        PaqueteServicio(paquetes, destinos).crear_paquete(
+            "Cupo unitario", ["Norte", "Sur"], salida,
+            salida + timedelta(days=4), 1
+        )
+        paquete = paquetes.buscar_por_nombre("Cupo unitario")
+        ReservaServicio(
+            ReservaRepositorio(self.base_datos), paquetes
+        ).crear_reserva(cliente, "Cupo unitario", 1)
+
+        usuario_id = self.base_datos.conexion.execute(
+            "SELECT id FROM usuarios WHERE correo = ?",
+            (cliente.correo,)
+        ).fetchone()["id"]
+        paquete_id = self.base_datos.conexion.execute(
+            "SELECT id FROM paquetes WHERE nombre = ?",
+            (paquete.nombre,)
+        ).fetchone()["id"]
+        with self.assertRaises(sqlite3.IntegrityError):
+            with self.base_datos.transaccion() as conexion:
+                conexion.execute(
+                    """
+                    INSERT INTO reservas (
+                        usuario_id, paquete_id, cantidad_personas,
+                        fecha_emision, total
+                    ) VALUES (?, ?, 1, ?, ?)
+                    """,
+                    (usuario_id, paquete_id, date.today().isoformat(), 360)
+                )
+        self.assertEqual(
+            ReservaRepositorio(self.base_datos).cupos_ocupados(
+                "Cupo unitario"
+            ),
+            1
+        )
+
+    def test_paquete_exige_entre_dos_y_cinco_destinos(self):
+        destinos = DestinoRepositorio(self.base_datos)
+        for numero in range(6):
+            destinos.agregar(Destino(
+                f"Destino {numero}", "Zona", "Descripción", 2, 100
+            ))
+        filas_destino = self.base_datos.conexion.execute(
+            "SELECT id FROM destinos ORDER BY id"
+        ).fetchall()
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            with self.base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
+                    """
+                    INSERT INTO paquetes (
+                        nombre, fecha_salida, fecha_regreso, cupo_maximo,
+                        margen_operacion, precio_publicado
+                    ) VALUES ('Seis destinos', '2026-11-01', '2026-11-02', 2, 0.2, 600)
+                    """
+                )
+                for orden, fila in enumerate(filas_destino):
+                    conexion.execute(
+                        """
+                        INSERT INTO paquete_destinos (
+                            paquete_id, destino_id, orden
+                        ) VALUES (?, ?, ?)
+                        """,
+                        (cursor.lastrowid, fila["id"], orden)
+                    )
+        with self.assertRaises(sqlite3.IntegrityError):
+            with self.base_datos.transaccion() as conexion:
+                conexion.execute(
+                    """
+                    INSERT INTO paquetes (
+                        nombre, fecha_salida, fecha_regreso, cupo_maximo,
+                        margen_operacion, precio_publicado
+                    ) VALUES ('Sin destinos', '2026-11-01', '2026-11-02', 2, 0.2, 0)
+                    """
+                )
+
+    def test_migra_usuarios_desde_base_legacy_sin_modificar_origen(self):
+        ruta_legacy = Path(self.directorio.name) / "legacy.db"
+        conexion_legacy = sqlite3.connect(ruta_legacy)
+        conexion_legacy.executescript(
+            """
+            CREATE TABLE destinos (
+                id INTEGER PRIMARY KEY, nombre TEXT, zona TEXT,
+                descripcion TEXT, duracion_dias INTEGER,
+                costo_base REAL, disponible INTEGER
+            );
+            CREATE TABLE clientes (
+                id INTEGER PRIMARY KEY, nombre TEXT, rut TEXT,
+                correo TEXT, telefono TEXT, password_hash TEXT
+            );
+            INSERT INTO clientes VALUES (
+                7, 'Ana', '12345678-9', 'ana@example.com',
+                '+56912345678', 'hash-legacy'
+            );
+            """
+        )
+        conexion_legacy.commit()
+        conexion_legacy.close()
+
+        clientes = ClienteRepositorio(self.base_datos)
+        self.base_datos.migrar_desde(ruta_legacy)
+        fila = self.base_datos.conexion.execute(
+            "SELECT id, rut, telefono, password_hash FROM usuarios"
+        ).fetchone()
+
+        self.assertEqual(fila["id"], 7)
+        self.assertNotEqual(fila["rut"], "12345678-9")
+        self.assertNotEqual(fila["telefono"], "+56912345678")
+        self.assertEqual(fila["password_hash"], "hash-legacy")
+        cliente = clientes.buscar_por_correo("ana@example.com")
+        self.assertEqual(cliente.rut, "12345678-9")
+        conexion_legacy = sqlite3.connect(ruta_legacy)
+        rut_origen = conexion_legacy.execute(
+            "SELECT rut FROM clientes WHERE id = 7"
+        ).fetchone()[0]
+        conexion_legacy.close()
+        self.assertEqual(rut_origen, "12345678-9")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,11 @@
+### 2026-10-02
+
+- **Enlace al ancla:** [Seguridad y utilidades](#2026-10-02)
+- **Prompt:** “Necesito implementar el módulo de seguridad y utilidades básicas para Python 3.10+: Argon2id para contraseñas, Fernet para RUT y teléfono, aritmética monetaria CLP con `Decimal`, y logging en `app.log` con enmascaramiento de datos sensibles.”
+- **Respuesta y acciones:** Implementé hashing Argon2id y verificación, manteniendo migración de hashes PBKDF2 al iniciar sesión; cifré RUT y teléfono en SQLite e incorporé migración de filas existentes; añadí operaciones CLP con `Decimal` y redondeo entero, además de logging con filtro de enmascaramiento. Documenté la configuración de la clave Fernet y las dependencias.
+- **Archivos modificados:** `README.md`, `main.py`, `modelos/destino.py`, `modelos/paquete.py`, `modelos/reserva.py`, `repositorios/base_datos.py`, `repositorios/cliente_repositorio.py`, `repositorios/destino_repositorio.py`, `repositorios/paquete_repositorio.py`, `repositorios/reserva_repositorio.py`, `seguridad/contraseñas.py`, `seguridad/logging_config.py`, `seguridad/montos.py`, `seguridad/seguridad.py`, `servicios/autenticacion_servicio.py`, `requirements.txt`, `tests/test_persistencia.py` y `tests/test_seguridad.py`.
+- **Validaciones:** `python -m unittest discover -s tests` pasó (8 pruebas); `git diff --check` pasó y Pylance no reportó errores en los archivos modificados.
+
 ### 2026-09-29
 
 - **Prompt:** Configurar Gemini para actuar como agente IA local, analizar `main.py` y generar los cambios sin usar copilot y guardar los prompt en changelog.md de esta manera: ### AAAA-MM-DD; enlace al ancla; Prompt; Respuesta y acciones; Archivos modificados; Validaciones.

@@ -15,15 +15,15 @@ class ClienteRepositorio:
 
     def __migrar_datos_sensibles(self):
         filas = self.__conexion.execute(
-            "SELECT id, rut, telefono FROM clientes"
+            "SELECT id, rut, telefono FROM usuarios"
         ).fetchall()
         for fila in filas:
             rut = fila["rut"]
             telefono = fila["telefono"]
             if not rut.startswith("gAAAAA") or not telefono.startswith("gAAAAA"):
-                with self.__conexion:
-                    self.__conexion.execute(
-                        "UPDATE clientes SET rut = ?, telefono = ? WHERE id = ?",
+                with self.__base_datos.transaccion() as conexion:
+                    conexion.execute(
+                        "UPDATE usuarios SET rut = ?, telefono = ? WHERE id = ?",
                         (
                             rut if rut.startswith("gAAAAA") else encrypt_data(rut),
                             telefono if telefono.startswith("gAAAAA") else encrypt_data(telefono),
@@ -38,10 +38,10 @@ class ClienteRepositorio:
             )
         if self.buscar_por_rut(cliente.rut):
             raise ValidacionError("Ya existe un cliente con ese RUT.")
-        with self.__conexion:
-            self.__conexion.execute(
+        with self.__base_datos.transaccion() as conexion:
+            conexion.execute(
                 """
-                INSERT INTO clientes (
+                INSERT INTO usuarios (
                     nombre, rut, correo, telefono, password_hash
                 ) VALUES (?, ?, ?, ?, ?)
                 """,
@@ -56,20 +56,20 @@ class ClienteRepositorio:
 
     def listar(self):
         filas = self.__conexion.execute(
-            "SELECT * FROM clientes ORDER BY id"
+            "SELECT * FROM usuarios ORDER BY id"
         ).fetchall()
         return [self.__desde_fila(fila) for fila in filas]
 
     def buscar_por_correo(self, correo):
         fila = self.__conexion.execute(
-            "SELECT * FROM clientes WHERE correo = ?",
+            "SELECT * FROM usuarios WHERE correo = ?",
             (correo,)
         ).fetchone()
         return self.__desde_fila(fila) if fila else None
 
     def buscar_por_rut(self, rut):
         filas = self.__conexion.execute(
-            "SELECT * FROM clientes ORDER BY id"
+            "SELECT * FROM usuarios ORDER BY id"
         ).fetchall()
         for fila in filas:
             cliente = self.__desde_fila(fila)
@@ -78,9 +78,9 @@ class ClienteRepositorio:
         return None
 
     def actualizar_password_hash(self, correo, password_hash):
-        with self.__conexion:
-            self.__conexion.execute(
-                "UPDATE clientes SET password_hash = ? WHERE correo = ?",
+        with self.__base_datos.transaccion() as conexion:
+            conexion.execute(
+                "UPDATE usuarios SET password_hash = ? WHERE correo = ?",
                 (password_hash, correo)
             )
 

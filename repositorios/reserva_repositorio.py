@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from excepciones import CupoInsuficienteError
 from modelos.reserva import Reserva
 from repositorios.base_datos import BaseDatos
 from repositorios.cliente_repositorio import ClienteRepositorio
@@ -16,23 +17,34 @@ class ReservaRepositorio:
         self.__paquetes = PaqueteRepositorio(self.__base_datos)
 
     def agregar(self, reserva):
-        cliente = self.__conexion.execute(
-            "SELECT id FROM clientes WHERE correo = ?",
-            (reserva.cliente.correo,)
-        ).fetchone()
-        paquete = self.__conexion.execute(
-            "SELECT id FROM paquetes WHERE nombre = ?",
-            (reserva.paquete.nombre,)
-        ).fetchone()
-        if cliente is None or paquete is None:
-            raise ValueError(
-                "El cliente y el paquete deben existir en SQLite."
-            )
-        with self.__conexion:
-            self.__conexion.execute(
+        with self.__base_datos.transaccion() as conexion:
+            cliente = conexion.execute(
+                "SELECT id FROM usuarios WHERE correo = ?",
+                (reserva.cliente.correo,)
+            ).fetchone()
+            paquete = conexion.execute(
+                "SELECT id, cupo_maximo FROM paquetes WHERE nombre = ?",
+                (reserva.paquete.nombre,)
+            ).fetchone()
+            if cliente is None or paquete is None:
+                raise ValueError(
+                    "El usuario y el paquete deben existir en SQLite."
+                )
+            ocupados = conexion.execute(
+                """
+                SELECT COALESCE(SUM(cantidad_personas), 0)
+                FROM reservas WHERE paquete_id = ? AND estado = 'ACTIVA'
+                """,
+                (paquete["id"],)
+            ).fetchone()[0]
+            if ocupados + reserva.cantidad_personas > paquete["cupo_maximo"]:
+                raise CupoInsuficienteError(
+                    f"Solo quedan {paquete['cupo_maximo'] - ocupados} cupos."
+                )
+            conexion.execute(
                 """
                 INSERT INTO reservas (
-                    cliente_id, paquete_id, cantidad_personas,
+                    usuario_id, paquete_id, cantidad_personas,
                     fecha_emision, total
                 ) VALUES (?, ?, ?, ?, ?)
                 """,
@@ -56,7 +68,7 @@ class ReservaRepositorio:
             """
             SELECT r.*
             FROM reservas AS r
-            JOIN clientes AS c ON c.id = r.cliente_id
+            JOIN usuarios AS c ON c.id = r.usuario_id
             WHERE c.correo = ?
             ORDER BY r.id
             """,
@@ -70,7 +82,7 @@ class ReservaRepositorio:
             SELECT r.*
             FROM reservas AS r
             JOIN paquetes AS p ON p.id = r.paquete_id
-            WHERE p.nombre = ?
+            WHERE p.nombre = ? AND r.estado = 'ACTIVA'
             ORDER BY r.id
             """,
             (nombre_paquete,)
@@ -83,7 +95,7 @@ class ReservaRepositorio:
             SELECT COALESCE(SUM(r.cantidad_personas), 0) AS ocupados
             FROM reservas AS r
             JOIN paquetes AS p ON p.id = r.paquete_id
-            WHERE p.nombre = ?
+            WHERE p.nombre = ? AND r.estado = 'ACTIVA'
             """,
             (nombre_paquete,)
         ).fetchone()
@@ -91,8 +103,8 @@ class ReservaRepositorio:
 
     def __desde_fila(self, fila):
         cliente = self.__conexion.execute(
-            "SELECT * FROM clientes WHERE id = ?",
-            (fila["cliente_id"],)
+            "SELECT * FROM usuarios WHERE id = ?",
+            (fila["usuario_id"],)
         ).fetchone()
         paquete = self.__conexion.execute(
             "SELECT nombre FROM paquetes WHERE id = ?",

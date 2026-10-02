@@ -17,24 +17,25 @@ class PaqueteRepositorio:
 
     def agregar(self, paquete):
         try:
-            with self.__conexion:
-                cursor = self.__conexion.execute(
+            with self.__base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
                     """
                     INSERT INTO paquetes (
                         nombre, fecha_salida, fecha_regreso,
-                        cupo_maximo, precio_por_persona
-                    ) VALUES (?, ?, ?, ?, ?)
+                        cupo_maximo, margen_operacion, precio_publicado
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         paquete.nombre,
                         paquete.fecha_salida.isoformat(),
                         paquete.fecha_regreso.isoformat(),
                         paquete.cupo_maximo,
+                        float(paquete.margen_operacion),
                         int(paquete.precio_por_persona)
                     )
                 )
                 for orden, destino in enumerate(paquete.destinos):
-                    fila = self.__conexion.execute(
+                    fila = conexion.execute(
                         "SELECT id FROM destinos WHERE nombre = ?",
                         (destino.nombre,)
                     ).fetchone()
@@ -42,7 +43,7 @@ class PaqueteRepositorio:
                         raise ValueError(
                             f"El destino '{destino.nombre}' no está guardado."
                         )
-                    self.__conexion.execute(
+                    conexion.execute(
                         """
                         INSERT INTO paquete_destinos (
                             paquete_id, destino_id, orden
@@ -70,8 +71,8 @@ class PaqueteRepositorio:
 
     def eliminar(self, nombre):
         try:
-            with self.__conexion:
-                cursor = self.__conexion.execute(
+            with self.__base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
                     "DELETE FROM paquetes WHERE nombre = ?",
                     (nombre,)
                 )
@@ -113,5 +114,6 @@ class PaqueteRepositorio:
             date.fromisoformat(fila["fecha_salida"]),
             date.fromisoformat(fila["fecha_regreso"]),
             fila["cupo_maximo"],
-            precio_por_persona=fila["precio_por_persona"]
+            margen=fila["margen_operacion"],
+            precio_por_persona=fila["precio_publicado"]
         )

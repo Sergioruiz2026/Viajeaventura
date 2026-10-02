@@ -35,7 +35,7 @@ python main.py
 ```
 
 Los destinos, paquetes, clientes y reservas se almacenan en memoria y se pierden al cerrar la aplicación.
-Los destinos, paquetes, clientes y reservas se almacenan en SQLite, en `viajes_aventura.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones.
+Los destinos, paquetes, usuarios y reservas se almacenan en SQLite, en `app.db` en la raíz del proyecto. El archivo se crea automáticamente al iniciar la aplicación y conserva los datos entre ejecuciones. Si solo existe la base anterior `viajes_aventura.db`, sus datos se copian una vez al nuevo esquema; el archivo anterior se conserva.
 
 Para usar otra ruta de base de datos, define `VIAJES_DB_PATH` antes de iniciar:
 

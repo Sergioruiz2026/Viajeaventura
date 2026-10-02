@@ -26,6 +26,7 @@ class Paquete:
             raise ValidacionError("La fecha de regreso debe ser posterior.")
         if cupo_maximo <= 0:
             raise ValidacionError("El cupo debe ser mayor que cero.")
+        margen = a_decimal(margen)
         if margen < 0:
             raise ValidacionError("El margen no puede ser negativo.")
 
@@ -34,6 +35,7 @@ class Paquete:
         self.__fecha_salida = fecha_salida
         self.__fecha_regreso = fecha_regreso
         self.__cupo_maximo = cupo_maximo
+        self.__margen = margen
         costo_total = sum(
             (a_decimal(destino.costo_base) for destino in destinos),
             start=a_decimal(0)
@@ -51,6 +53,10 @@ class Paquete:
     @property
     def precio_por_persona(self):
         return self.__precio_por_persona
+
+    @property
+    def margen_operacion(self):
+        return self.__margen
 
     @property
     def fecha_salida(self):
