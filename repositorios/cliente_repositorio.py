@@ -1,6 +1,7 @@
 """ creacion de la clase ClienteRepositorio para manejar la lista de clientes """
 
 import sqlite3
+from datetime import datetime, timedelta
 
 from excepciones import CorreoDuplicadoError, ValidacionError
 from modelos.cliente import Cliente
@@ -45,15 +46,16 @@ class ClienteRepositorio:
                 conexion.execute(
                     """
                     INSERT INTO usuarios (
-                        nombre, rut, correo, telefono, password_hash
-                    ) VALUES (?, ?, ?, ?, ?)
+                        nombre, rut, correo, telefono, password_hash, rol
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         cliente.nombre,
                         encrypt_data(cliente.rut),
                         cliente.correo,
                         encrypt_data(cliente.telefono),
-                        cliente.password_hash
+                        cliente.password_hash,
+                        cliente.rol
                     )
                 )
         except sqlite3.IntegrityError as error:
@@ -75,6 +77,79 @@ class ClienteRepositorio:
             (correo,)
         ).fetchone()
         return self.__desde_fila(fila) if fila else None
+
+    def esta_bloqueado(self, correo, ahora):
+        with self.__base_datos.transaccion() as conexion:
+            fila = conexion.execute(
+                """
+                SELECT intentos_fallidos, bloqueado_hasta
+                FROM usuarios WHERE correo = ?
+                """,
+                (correo,)
+            ).fetchone()
+            if fila is None or fila["bloqueado_hasta"] is None:
+                return False
+            bloqueado_hasta = datetime.fromisoformat(fila["bloqueado_hasta"])
+            if bloqueado_hasta > ahora:
+                return True
+            conexion.execute(
+                """
+                UPDATE usuarios
+                SET intentos_fallidos = 0, bloqueado_hasta = NULL
+                WHERE correo = ?
+                """,
+                (correo,)
+            )
+            return False
+
+    def registrar_intento_fallido(self, correo, ahora):
+        with self.__base_datos.transaccion() as conexion:
+            fila = conexion.execute(
+                """
+                SELECT intentos_fallidos, bloqueado_hasta
+                FROM usuarios WHERE correo = ?
+                """,
+                (correo,)
+            ).fetchone()
+            if fila is None:
+                return 0
+
+            bloqueado_hasta = (
+                datetime.fromisoformat(fila["bloqueado_hasta"])
+                if fila["bloqueado_hasta"] is not None
+                else None
+            )
+            if bloqueado_hasta is not None and bloqueado_hasta > ahora:
+                return fila["intentos_fallidos"]
+
+            intentos = (
+                0 if bloqueado_hasta is not None else fila["intentos_fallidos"]
+            ) + 1
+            nuevo_bloqueo = (
+                (ahora + timedelta(minutes=15)).isoformat()
+                if intentos >= 5
+                else None
+            )
+            conexion.execute(
+                """
+                UPDATE usuarios
+                SET intentos_fallidos = ?, bloqueado_hasta = ?
+                WHERE correo = ?
+                """,
+                (intentos, nuevo_bloqueo, correo)
+            )
+            return intentos
+
+    def reiniciar_intentos_fallidos(self, correo):
+        with self.__base_datos.transaccion() as conexion:
+            conexion.execute(
+                """
+                UPDATE usuarios
+                SET intentos_fallidos = 0, bloqueado_hasta = NULL
+                WHERE correo = ?
+                """,
+                (correo,)
+            )
 
     def buscar_por_rut(self, rut):
         filas = self.__conexion.execute(
@@ -100,5 +175,6 @@ class ClienteRepositorio:
             decrypt_data(fila["rut"]),
             fila["correo"],
             decrypt_data(fila["telefono"]),
-            fila["password_hash"]
+            fila["password_hash"],
+            fila["rol"]
         )

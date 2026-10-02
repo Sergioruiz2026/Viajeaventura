@@ -3,6 +3,7 @@
 
 from modelos.destino import Destino
 from excepciones import ValidacionError
+from seguridad.autorizacion import exigir_rol
 
 
 class CatalogoServicio:
@@ -16,8 +17,11 @@ class CatalogoServicio:
         zona,
         descripcion,
         duracion_dias,
-        costo_base
+        costo_base,
+        *,
+        sesion
     ):
+        exigir_rol(sesion, "ADMIN")
 
         destino = Destino(
             nombre,
@@ -31,10 +35,12 @@ class CatalogoServicio:
 
         return destino
 
-    def listar_destinos(self):
+    def listar_destinos(self, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__destino_repo.listar()
 
-    def buscar_destino(self, nombre):
+    def buscar_destino(self, nombre, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__destino_repo.buscar_por_nombre(nombre)
 
     def modificar_destino(
@@ -44,8 +50,11 @@ class CatalogoServicio:
         zona,
         descripcion,
         duracion_dias,
-        costo_base
+        costo_base,
+        *,
+        sesion
     ):
+        exigir_rol(sesion, "ADMIN")
         destino = self.__destino_repo.buscar_por_nombre(nombre_actual)
         if destino is None:
             raise ValidacionError("El destino no existe.")
@@ -56,5 +65,6 @@ class CatalogoServicio:
             raise ValidacionError("No se pudo actualizar el destino.")
         return destino
 
-    def eliminar_destino(self, nombre):
+    def eliminar_destino(self, nombre, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__destino_repo.eliminar(nombre)

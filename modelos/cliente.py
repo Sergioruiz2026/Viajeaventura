@@ -6,13 +6,15 @@ class Cliente:
         rut,
         correo,
         telefono,
-        password_hash):
+        password_hash,
+        rol="CLIENTE"):
 
         self.__nombre = nombre
         self.__rut = rut
         self.__correo = correo
         self.__telefono = telefono
         self.__password_hash = password_hash
+        self.__rol = rol
 
     @property
     def nombre(self):
@@ -25,6 +27,10 @@ class Cliente:
     @property
     def password_hash(self):
         return self.__password_hash
+
+    @property
+    def rol(self):
+        return self.__rol
 
     @property
     def rut(self):

@@ -24,3 +24,9 @@ class ReservaNoPermitidaError(ViajesAventuraError):
 
 class AutenticacionError(ViajesAventuraError):
 	pass
+
+class AutorizacionError(ViajesAventuraError):
+	pass
+
+class SesionExpiradaError(AutenticacionError):
+	pass

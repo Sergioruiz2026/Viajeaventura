@@ -5,6 +5,7 @@ from decimal import Decimal, DecimalException
 from modelos.paquete import Paquete
 from excepciones import ValidacionError
 from seguridad.montos import a_decimal
+from seguridad.autorizacion import exigir_rol
 
 
 class PaqueteServicio:
@@ -22,8 +23,10 @@ class PaqueteServicio:
         cupo_maximo=None,
         margen_operacion=Decimal("0.20"),
         *,
-        ids_destinos=None
+        ids_destinos=None,
+        sesion
     ):
+        exigir_rol(sesion, "ADMIN")
         if ids_destinos is not None:
             if nombres_destinos is not None:
                 raise ValidacionError(
@@ -78,14 +81,18 @@ class PaqueteServicio:
         self.__paquete_repo.agregar(paquete)
         return paquete
 
-    def listar_paquetes(self):
+    def listar_paquetes(self, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.listar()
 
-    def listar_vigentes(self):
+    def listar_vigentes(self, *, sesion):
+        exigir_rol(sesion, "CLIENTE")
         return self.__paquete_repo.paquetes_vigentes()
 
-    def buscar_paquete(self, nombre):
+    def buscar_paquete(self, nombre, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.buscar_por_nombre(nombre)
 
-    def eliminar_paquete(self, nombre):
+    def eliminar_paquete(self, nombre, *, sesion):
+        exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.eliminar(nombre)

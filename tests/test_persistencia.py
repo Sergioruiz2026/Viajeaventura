@@ -7,9 +7,10 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 
-from excepciones import CorreoDuplicadoError, ValidacionError
+from excepciones import AutorizacionError, CorreoDuplicadoError, ValidacionError
 from modelos.destino import Destino
 from modelos.cliente import Cliente
+from modelos.sesion import Sesion
 from repositorios.base_datos import BaseDatos
 from repositorios.cliente_repositorio import ClienteRepositorio
 from repositorios.destino_repositorio import DestinoRepositorio
@@ -133,13 +134,18 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         paquetes = PaqueteRepositorio(self.base_datos)
         reservas = ReservaRepositorio(self.base_datos)
 
-        cliente = AutenticacionServicio(clientes).registrar_cliente(
+        autenticacion = AutenticacionServicio(clientes)
+        autenticacion.registrar_cliente(
             "Ana",
             "12.345.678-5",
             "ana@example.com",
             "+56912345678",
             "ClaveFuerte1!"
         )
+        sesion_cliente = autenticacion.iniciar_sesion(
+            "ana@example.com", "ClaveFuerte1!"
+        )
+        sesion_admin = Sesion.administrador("admin")
         destinos.agregar(Destino("Norte", "Norte", "Desierto", 4, 100))
         destinos.agregar(Destino("Sur", "Sur", "Lagos", 5, 200))
 
@@ -149,12 +155,25 @@ class PersistenciaSQLiteTests(unittest.TestCase):
             ["Norte", "Sur"],
             salida,
             salida + timedelta(days=7),
-            4
+            4,
+            sesion=sesion_admin
         )
-        ReservaServicio(reservas, paquetes).crear_reserva(
-            cliente,
+        servicio_reservas = ReservaServicio(reservas, paquetes)
+        servicio_reservas.crear_reserva(
+            sesion_cliente,
             "Ruta Chile",
             2
+        )
+        with self.assertRaises(AutorizacionError):
+            servicio_reservas.crear_reserva(
+                sesion_admin, "Ruta Chile", 1
+            )
+        with self.assertRaises(AutorizacionError):
+            servicio_reservas.reservas_cliente(sesion_admin)
+        with self.assertRaises(AutorizacionError):
+            servicio_reservas.listar_reservas(sesion=sesion_cliente)
+        self.assertEqual(
+            len(servicio_reservas.listar_reservas(sesion=sesion_admin)), 1
         )
         self.base_datos.cerrar()
 
@@ -201,9 +220,13 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         )
 
         clientes = ClienteRepositorio(self.base_datos)
-        cliente = AutenticacionServicio(clientes).registrar_cliente(
+        autenticacion = AutenticacionServicio(clientes)
+        autenticacion.registrar_cliente(
             "Ana", "12.345.678-5", "ana@example.com", "+56912345678",
             "ClaveFuerte1!"
+        )
+        sesion_cliente = autenticacion.iniciar_sesion(
+            "ana@example.com", "ClaveFuerte1!"
         )
         destinos = DestinoRepositorio(self.base_datos)
         destinos.agregar(Destino("Norte", "Norte", "Desierto", 4, 100))
@@ -212,20 +235,20 @@ class PersistenciaSQLiteTests(unittest.TestCase):
         salida = date.today() + timedelta(days=30)
         PaqueteServicio(paquetes, destinos).crear_paquete(
             "Cupo unitario", ["Norte", "Sur"], salida,
-            salida + timedelta(days=4), 1
+            salida + timedelta(days=4), 1,
+            sesion=Sesion.administrador("admin")
         )
-        paquete = paquetes.buscar_por_nombre("Cupo unitario")
         ReservaServicio(
             ReservaRepositorio(self.base_datos), paquetes
-        ).crear_reserva(cliente, "Cupo unitario", 1)
+        ).crear_reserva(sesion_cliente, "Cupo unitario", 1)
 
         usuario_id = self.base_datos.conexion.execute(
             "SELECT id FROM usuarios WHERE correo = ?",
-            (cliente.correo,)
+            (sesion_cliente.correo,)
         ).fetchone()["id"]
         paquete_id = self.base_datos.conexion.execute(
             "SELECT id FROM paquetes WHERE nombre = ?",
-            (paquete.nombre,)
+            ("Cupo unitario",)
         ).fetchone()["id"]
         with self.assertRaises(sqlite3.IntegrityError):
             with self.base_datos.transaccion() as conexion:

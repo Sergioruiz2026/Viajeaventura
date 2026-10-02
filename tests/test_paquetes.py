@@ -1,9 +1,11 @@
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from excepciones import ValidacionError
+from excepciones import AutorizacionError, SesionExpiradaError, ValidacionError
+from modelos.cliente import Cliente
 from modelos.destino import Destino
+from modelos.sesion import Sesion
 from repositorios.base_datos import BaseDatos
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
@@ -17,6 +19,9 @@ class GestionPaquetesTests(unittest.TestCase):
         self.destinos = DestinoRepositorio(self.base_datos)
         self.paquete_repo = PaqueteRepositorio(self.base_datos)
         self.servicio = PaqueteServicio(self.paquete_repo, self.destinos)
+        self.admin = Sesion.administrador("admin")
+        cliente = Cliente("Ana", "12.345.678-5", "ana@example.com", "+56912345678", "hash")
+        self.cliente = Sesion(cliente)
         self.destinos.agregar(
             Destino("Norte", "Zona", "Desierto", 3, 120000)
         )
@@ -36,6 +41,7 @@ class GestionPaquetesTests(unittest.TestCase):
             fecha_salida=salida,
             fecha_regreso=salida + timedelta(days=5),
             cupo_maximo=4,
+            sesion=self.admin,
             **kwargs
         )
 
@@ -52,12 +58,32 @@ class GestionPaquetesTests(unittest.TestCase):
         guardado = self.paquete_repo.buscar_por_nombre("Ruta")
         self.assertEqual(guardado.precio_por_persona, Decimal("516000"))
 
+    def test_roles_no_pueden_invocar_operaciones_de_paquetes_ajenas(self):
+        salida = date.today() + timedelta(days=30)
+        with self.assertRaises(AutorizacionError):
+            self.servicio.crear_paquete(
+                "Solo admin", self.ids_destinos, salida,
+                salida + timedelta(days=5), 4, sesion=self.cliente
+            )
+        with self.assertRaises(AutorizacionError):
+            self.servicio.listar_paquetes(sesion=self.cliente)
+        with self.assertRaises(AutorizacionError):
+            self.servicio.listar_vigentes(sesion=self.admin)
+        sesion_expirada = Sesion(
+            self.cliente.usuario,
+            ahora=datetime.now() - timedelta(minutes=31)
+        )
+        with self.assertRaises(SesionExpiradaError):
+            self.servicio.listar_vigentes(sesion=sesion_expirada)
+
     def test_rechaza_selecciones_invalidas_y_margen_negativo(self):
         salida = date.today() + timedelta(days=30)
         base = (salida, salida + timedelta(days=5), 4)
         for ids in ([], [self.ids_destinos[0]], self.ids_destinos * 3):
             with self.subTest(ids=ids), self.assertRaises(ValidacionError):
-                self.servicio.crear_paquete("Inválido", ids, *base)
+                self.servicio.crear_paquete(
+                    "Inválido", ids, *base, sesion=self.admin
+                )
 
         for ids, regreso, cupo, margen in (
             ([self.ids_destinos[0]] * 2, base[1], base[2], Decimal("0.2")),
@@ -69,7 +95,7 @@ class GestionPaquetesTests(unittest.TestCase):
                 with self.assertRaises(ValidacionError):
                     self.servicio.crear_paquete(
                         "Inválido", ids, salida, regreso, cupo,
-                        margen_operacion=margen
+                        margen_operacion=margen, sesion=self.admin
                     )
 
         self.base_datos.conexion.execute(
@@ -79,7 +105,8 @@ class GestionPaquetesTests(unittest.TestCase):
         with self.assertRaises(ValidacionError):
             self.servicio.crear_paquete(
                 "Destino retirado", ids_destinos=self.ids_destinos,
-                fecha_salida=salida, fecha_regreso=base[1], cupo_maximo=4
+                fecha_salida=salida, fecha_regreso=base[1], cupo_maximo=4,
+                sesion=self.admin
             )
 
     def test_consultas_cliente_y_admin_exponen_cupo_y_estado(self):
@@ -118,13 +145,13 @@ class GestionPaquetesTests(unittest.TestCase):
         )
         conexion.commit()
 
-        vigentes = self.servicio.listar_vigentes()
+        vigentes = self.servicio.listar_vigentes(sesion=self.cliente)
         self.assertEqual([paquete.nombre for paquete in vigentes], ["Vigente"])
         self.assertEqual(vigentes[0].cupo_disponible, 2)
         self.assertEqual(vigentes[0].cupo_reservado_activo, 2)
         self.assertIn("Cupos disponibles: 2", str(vigentes[0]))
 
-        todos = self.servicio.listar_paquetes()
+        todos = self.servicio.listar_paquetes(sesion=self.admin)
         self.assertEqual(len(todos), 3)
         self.assertEqual(
             {paquete.nombre: paquete.estado for paquete in todos},

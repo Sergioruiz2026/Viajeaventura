@@ -1,6 +1,9 @@
 """"CREACION DE SERVICIO DE AUTENTICACION"""
 
+from datetime import datetime
+
 from modelos.cliente import Cliente
+from modelos.sesion import Sesion
 
 from seguridad.validadores import Validador
 from seguridad.contraseñas import GestorContrasenas
@@ -41,20 +44,23 @@ class AutenticacionServicio:
         self.__cliente_repo.agregar(cliente)
         return cliente
 
-    def iniciar_sesion(self, correo, password):
+    def iniciar_sesion(self, correo, password, *, ahora=None):
+        ahora = ahora or datetime.now()
         cliente = self.__cliente_repo.buscar_por_correo(correo)
-        if not cliente:
-            raise AutenticacionError("Usuario no encontrado.")
+        if cliente is None or self.__cliente_repo.esta_bloqueado(correo, ahora):
+            raise AutenticacionError("Correo o contraseña incorrectos.")
 
         valido = GestorContrasenas.verificar(
             password,
             cliente.password_hash
         )
         if not valido:
-            raise AutenticacionError("Contraseña incorrecta.")
+            self.__cliente_repo.registrar_intento_fallido(correo, ahora)
+            raise AutenticacionError("Correo o contraseña incorrectos.")
         if not cliente.password_hash.startswith("$argon2id$"):
             self.__cliente_repo.actualizar_password_hash(
                 correo,
                 GestorContrasenas.generar_hash(password)
             )
-        return cliente
+        self.__cliente_repo.reiniciar_intentos_fallidos(correo)
+        return Sesion(cliente, ahora=ahora)

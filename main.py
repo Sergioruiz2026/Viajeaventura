@@ -12,8 +12,15 @@ from servicios.catalogo_servicio import CatalogoServicio
 from servicios.paquete_servicio import PaqueteServicio
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.reserva_servicio import ReservaServicio
+from modelos.cliente import Cliente
+from seguridad.contraseñas import GestorContrasenas
 
-from excepciones import ValidacionError, ViajesAventuraError
+from excepciones import (
+    AutenticacionError,
+    SesionExpiradaError,
+    ValidacionError,
+    ViajesAventuraError
+)
 from seguridad.validadores import Validador
 from seguridad.logging_config import configurar_logging, enmascarar_texto
 from repositorios.base_datos import BaseDatos
@@ -49,7 +56,7 @@ ADMIN_PASSWORD = os.environ.get("VIAJES_ADMIN_PASSWORD")
 # MENÚ ADMINISTRADOR
 # ==========================
 
-def menu_admin():
+def menu_admin(sesion):
     while True:
         print("\n===== ADMINISTRADOR =====")
         print("1. Registrar destino")
@@ -72,12 +79,13 @@ def menu_admin():
                     zona,
                     descripcion,
                     duracion,
-                    costo
+                    costo,
+                    sesion=sesion
                 )
                 print("Destino registrado.")
 
             elif opcion == "2":
-                for destino in catalogo.listar_destinos():
+                for destino in catalogo.listar_destinos(sesion=sesion):
                     print(destino)
 
             elif opcion == "3":
@@ -101,16 +109,17 @@ def menu_admin():
                     destinos,
                     date(anio_salida, mes_salida, dia_salida),
                     date(anio_retorno, mes_retorno, dia_retorno),
-                    cupo
+                    cupo,
+                    sesion=sesion
                 )
                 print("Paquete creado.")
 
             elif opcion == "4":
-                for paquete in paquetes.listar_paquetes():
+                for paquete in paquetes.listar_paquetes(sesion=sesion):
                     print(paquete)
 
             elif opcion == "5":
-                todas = reservas.listar_reservas()
+                todas = reservas.listar_reservas(sesion=sesion)
                 if not todas:
                     print("No existen reservas.")
                 for reserva in todas:
@@ -122,6 +131,9 @@ def menu_admin():
             else:
                 print("Opción inválida.")
 
+        except SesionExpiradaError as error:
+            print(f"Error: {enmascarar_texto(str(error))}")
+            break
         except ViajesAventuraError as error:
             print(f"Error: {enmascarar_texto(str(error))}")
         except (ValueError, InvalidOperation) as error:
@@ -132,9 +144,9 @@ def menu_admin():
 # MENÚ CLIENTE
 # ==========================
 
-def menu_cliente(cliente):
+def menu_cliente(sesion):
     while True:
-        print(f"\n===== BIENVENIDO {cliente.nombre} =====")
+        print(f"\n===== BIENVENIDO {sesion.nombre} =====")
         print("1. Ver paquetes")
         print("2. Reservar paquete")
         print("3. Mis reservas")
@@ -143,7 +155,7 @@ def menu_cliente(cliente):
         opcion = input("Seleccione: ")
         try:
             if opcion == "1":
-                lista = paquetes.listar_vigentes()
+                lista = paquetes.listar_vigentes(sesion=sesion)
                 if not lista:
                     print("No existen paquetes.")
                 for paquete in lista:
@@ -153,7 +165,7 @@ def menu_cliente(cliente):
                 nombre_paquete = input("Nombre paquete: ")
                 personas = int(input("Cantidad personas: "))
                 reserva = reservas.crear_reserva(
-                    cliente,
+                    sesion,
                     nombre_paquete,
                     personas
                 )
@@ -161,9 +173,7 @@ def menu_cliente(cliente):
                 print(f"Total: ${reserva.total:,.0f}")
 
             elif opcion == "3":
-                mis_reservas = reservas.reservas_cliente(
-                    cliente.correo
-                )
+                mis_reservas = reservas.reservas_cliente(sesion)
                 if not mis_reservas:
                     print("No posee reservas.")
                 for reserva in mis_reservas:
@@ -175,6 +185,9 @@ def menu_cliente(cliente):
             else:
                 print("Opción inválida.")
 
+        except SesionExpiradaError as error:
+            print(f"Error: {enmascarar_texto(str(error))}")
+            break
         except ViajesAventuraError as error:
             print(f"Error: {enmascarar_texto(str(error))}")
         except ValueError as error:
@@ -269,8 +282,8 @@ def login_cliente():
     try:
         correo = input("Correo: ")
         password = getpass.getpass("Contraseña: ")
-        cliente = auth.iniciar_sesion(correo, password)
-        menu_cliente(cliente)
+        sesion = auth.iniciar_sesion(correo, password)
+        menu_cliente(sesion)
     except ViajesAventuraError as error:
         print(f"Error: {enmascarar_texto(str(error))}")
 
@@ -285,10 +298,41 @@ def login_admin():
 
     if ADMIN_PASSWORD is None:
         print("Credenciales de administrador no configuradas.")
-    elif usuario == ADMIN_USUARIO and password == ADMIN_PASSWORD:
-        menu_admin()
+    elif usuario != ADMIN_USUARIO:
+        print("Correo o contraseña incorrectos.")
     else:
-        print("Credenciales incorrectas.")
+        try:
+            sesion = auth.iniciar_sesion(usuario, password)
+            if sesion.rol != "ADMIN":
+                raise AutenticacionError(
+                    "Correo o contraseña incorrectos."
+                )
+            menu_admin(sesion)
+        except AutenticacionError as error:
+            print(f"Error: {enmascarar_texto(str(error))}")
+
+
+def asegurar_administrador_configurado():
+    if ADMIN_PASSWORD is None:
+        return
+    administrador = cliente_repo.buscar_por_correo(ADMIN_USUARIO)
+    if administrador is None:
+        cliente_repo.agregar(Cliente(
+            "Administrador",
+            "",
+            ADMIN_USUARIO,
+            "",
+            GestorContrasenas.generar_hash(ADMIN_PASSWORD),
+            "ADMIN"
+        ))
+    elif administrador.rol == "ADMIN" and not GestorContrasenas.verificar(
+        ADMIN_PASSWORD, administrador.password_hash
+    ):
+        cliente_repo.actualizar_password_hash(
+            ADMIN_USUARIO,
+            GestorContrasenas.generar_hash(ADMIN_PASSWORD)
+        )
+        cliente_repo.reiniciar_intentos_fallidos(ADMIN_USUARIO)
 
 
 # ==========================
@@ -296,6 +340,7 @@ def login_admin():
 # ==========================
 
 def main():
+    asegurar_administrador_configurado()
     configurar_logging()
     while True:
         print("\n======================")
