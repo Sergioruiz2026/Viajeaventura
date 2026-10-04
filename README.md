@@ -71,3 +71,15 @@ Para usar otra ruta de base de datos, define `VIAJES_DB_PATH` antes de iniciar:
 $env:VIAJES_DB_PATH = "C:\datos\viajes_aventura.db"
 python main.py
 ```
+
+## Usuarios registrados en app.db
+
+| ID | Rol     | Nombre       | Correo / Usuario      |
+|----|---------|--------------|-----------------------|
+| 1  | CLIENTE | Sergio Ruiz  | ruiz.2006@hotmail.com |
+| 2  | CLIENTE | Loreto       | loreto@gmail.com      |
+| 3  | ADMIN   | Administrador | admin                |
+| 4  | ADMIN   | Administrador | SergioR              |
+
+Los administradores se autentican con su nombre de usuario (campo correo).
+Las contraseñas no se documentan aquí; se gestionan desde `6. Administrar usuarios` en el menú ADMIN.
