@@ -1,7 +1,7 @@
 
 # ViajesAventura
 
-Aplicación de consola para administrar destinos, paquetes, clientes y reservas.
+Aplicación de consola y web para administrar destinos, paquetes, clientes y reservas.
 
 ## Requisitos
 
@@ -77,17 +77,14 @@ $env:VIAJES_DB_PATH = "C:\datos\viajes_aventura.db"
 python main.py
 ```
 
-## Usuarios registrados en app.db
+## Usuarios
 
-| ID | Rol     | Nombre       | Correo / Usuario      |
-|----|---------|--------------|-----------------------|
-| 1  | CLIENTE | Sergio Ruiz  | ruiz.2006@hotmail.com |
-| 2  | CLIENTE | Loreto       | loreto@gmail.com      |
-| 3  | ADMIN   | Administrador | admin                |
-| 4  | ADMIN   | Administrador | SergioR              |
+El repositorio no incluye la base de datos ni credenciales. Cada instalación
+crea su administrador inicial con las variables `VIAJES_ADMIN_USUARIO` y
+`VIAJES_ADMIN_PASSWORD`, y los clientes se registran desde la aplicación.
 
-Los administradores se autentican con su nombre de usuario (campo correo).
-Las contraseñas no se documentan aquí; se gestionan desde `6. Administrar usuarios` en el menú ADMIN.
+Los administradores se autentican con su nombre de usuario y los clientes con
+su correo.
 
 ## Verificación de la rúbrica
 
