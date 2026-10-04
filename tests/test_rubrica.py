@@ -62,5 +62,24 @@ class RubricaTests(unittest.TestCase):
             )
 
 
+    def test_recuperacion_se_bloquea_tras_cinco_rut_incorrectos(self):
+        mensaje = "No se encontró una cuenta con esos datos."
+        self.autenticacion.registrar_cliente(
+            "Ana", "12.345.678-5", "ana@example.com", "+56912345678",
+            "ClaveFuerte1!"
+        )
+        ahora = datetime(2026, 10, 4, 12, 0, 0)
+        for _ in range(5):
+            with self.assertRaisesRegex(AutenticacionError, mensaje):
+                self.autenticacion.recuperar_contrasena(
+                    "ana@example.com", "11.111.111-1", "NuevaClave1!",
+                    ahora=ahora
+                )
+        with self.assertRaisesRegex(AutenticacionError, mensaje):
+            self.autenticacion.recuperar_contrasena(
+                "ana@example.com", "12.345.678-5", "NuevaClave1!",
+                ahora=ahora
+            )
+
 if __name__ == "__main__":
     unittest.main()

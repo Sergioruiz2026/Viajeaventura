@@ -116,24 +116,22 @@ class AutenticacionServicio:
             GestorContrasenas.generar_hash(nueva_password)
         )
 
-    def recuperar_contrasena(self, correo, rut, nueva_password):
+    def recuperar_contrasena(self, correo, rut, nueva_password, *, ahora=None):
+        ahora = ahora or datetime.now()
+        mensaje = "No se encontró una cuenta con esos datos."
         Validador.validar_correo(correo)
         Validador.validar_rut(rut)
         Validador.validar_contrasena(nueva_password)
         cliente = self.__cliente_repo.buscar_por_correo(correo)
-        if cliente is None:
-            raise AutenticacionError(
-                "No se encontró una cuenta con esos datos."
-            )
-        if cliente.rol == "ADMIN":
-            raise ValidacionError(
-                "Este método de recuperación es solo para clientes."
-            )
+        if cliente is None or cliente.rol == "ADMIN":
+            raise AutenticacionError(mensaje)
+        if self.__cliente_repo.esta_bloqueado(correo, ahora):
+            raise AutenticacionError(mensaje)
         if cliente.rut.casefold() != rut.strip().casefold():
-            raise AutenticacionError(
-                "No se encontró una cuenta con esos datos."
-            )
+            self.__cliente_repo.registrar_intento_fallido(correo, ahora)
+            raise AutenticacionError(mensaje)
         self.__cliente_repo.actualizar_password_hash(
             correo,
             GestorContrasenas.generar_hash(nueva_password)
         )
+        self.__cliente_repo.reiniciar_intentos_fallidos(correo)
