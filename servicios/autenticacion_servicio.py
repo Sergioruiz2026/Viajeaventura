@@ -107,3 +107,25 @@ class AutenticacionServicio:
             nuevo_usuario.strip(),
             GestorContrasenas.generar_hash(nueva_password)
         )
+
+    def recuperar_contrasena(self, correo, rut, nueva_password):
+        Validador.validar_correo(correo)
+        Validador.validar_rut(rut)
+        Validador.validar_contrasena(nueva_password)
+        cliente = self.__cliente_repo.buscar_por_correo(correo)
+        if cliente is None:
+            raise AutenticacionError(
+                "No se encontró una cuenta con esos datos."
+            )
+        if cliente.rol == "ADMIN":
+            raise ValidacionError(
+                "Este método de recuperación es solo para clientes."
+            )
+        if cliente.rut.casefold() != rut.strip().casefold():
+            raise AutenticacionError(
+                "No se encontró una cuenta con esos datos."
+            )
+        self.__cliente_repo.actualizar_password_hash(
+            correo,
+            GestorContrasenas.generar_hash(nueva_password)
+        )

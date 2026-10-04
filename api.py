@@ -76,6 +76,12 @@ class ReservaRequest(BaseModel):
     cantidad_personas: int
 
 
+class RecuperarContrasenaRequest(BaseModel):
+    correo: str
+    rut: str
+    nueva_password: str
+
+
 # ---------------------------------------------------------------------------
 # Almacén de sesiones en memoria
 # ---------------------------------------------------------------------------
@@ -373,6 +379,20 @@ def crear_app(servicio=None):
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e
         return {"id": r.id, "total": int(r.total)}
+
+    @app.post("/api/recuperar-contrasena")
+    def recuperar_contrasena(
+        datos: RecuperarContrasenaRequest,
+        _: None = Depends(_verificar_csrf),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            svcs.autenticacion.recuperar_contrasena(
+                datos.correo, datos.rut, datos.nueva_password
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"mensaje": "Contraseña actualizada correctamente."}
 
     @app.post("/api/reservas/{reserva_id}/cancelar")
     def cancelar_reserva(

@@ -40,17 +40,35 @@
 
     .tabs { display: flex; gap: 2px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
     .tab {
-      padding: 8px 18px; border: none; background: none;
+      padding: 8px 16px; border: none; background: none;
       cursor: pointer; border-bottom: 2px solid transparent;
-      margin-bottom: -2px; font-size: .875rem; color: #718096;
+      margin-bottom: -2px; font-size: .85rem; color: #718096;
     }
     .tab.activa { border-bottom-color: #1a56db; color: #1a56db; font-weight: 600; }
 
     form { display: flex; flex-direction: column; gap: 11px; }
     .campo { display: flex; flex-direction: column; gap: 4px; }
     label { font-size: .82rem; font-weight: 600; color: #4a5568; }
-    input, select { padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: .875rem; width: 100%; }
-    input:focus, select:focus { outline: none; border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+    input, select {
+      padding: 8px 10px; border: 1px solid #cbd5e0;
+      border-radius: 6px; font-size: .875rem; width: 100%;
+    }
+    input:focus, select:focus {
+      outline: none; border-color: #1a56db;
+      box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+    }
+
+    /* ── toggle mostrar/ocultar contraseña ── */
+    .campo-pwd { display: flex; position: relative; }
+    .campo-pwd input { flex: 1; border-radius: 6px 0 0 6px; border-right: none; }
+    .campo-pwd input:focus { z-index: 1; }
+    .btn-ojo {
+      padding: 0 12px; background: #f7fafc; border: 1px solid #cbd5e0;
+      border-left: none; border-radius: 0 6px 6px 0;
+      cursor: pointer; font-size: .78rem; color: #4a5568;
+      white-space: nowrap; transition: background .15s;
+    }
+    .btn-ojo:hover { background: #e2e8f0; color: #1a56db; }
 
     .alerta { padding: 9px 13px; border-radius: 6px; font-size: .85rem; margin-top: 10px; }
     .alerta-error  { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
@@ -58,6 +76,7 @@
     .oculto { display: none !important; }
 
     .seccion-titulo { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 14px; }
+    .nota { font-size: .82rem; color: #718096; margin-bottom: 12px; line-height: 1.5; }
 
     table { width: 100%; border-collapse: collapse; font-size: .85rem; }
     th { text-align: left; padding: 9px 11px; background: #f7fafc; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
@@ -65,13 +84,13 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #f7fafc; }
 
-    .estado-activa  { color: #276749; font-weight: 600; }
+    .estado-activa    { color: #276749; font-weight: 600; }
     .estado-cancelada { color: #9b2c2c; }
-    .estado-vigente { color: #276749; }
-    .estado-vencido { color: #9b2c2c; }
+    .estado-vigente   { color: #276749; }
+    .estado-vencido   { color: #9b2c2c; }
 
     .fila-reservar td { background: #ebf8ff; padding: 12px 11px; }
-    .inline-reservar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .inline-reservar  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .inline-reservar input { width: 72px; }
 
     .nav-admin { display: flex; gap: 4px; margin-bottom: 0; }
@@ -91,29 +110,35 @@
 
   <!-- ═══════════════════ VISTA: AUTENTICACIÓN ═══════════════════ -->
   <div id="vista-auth">
-    <div class="card" style="max-width:420px;margin:0 auto">
+    <div class="card" style="max-width:440px;margin:0 auto">
       <div class="tabs" id="tabs-auth">
         <button class="tab activa" data-tab="login">Iniciar sesión</button>
         <button class="tab"        data-tab="registro">Registrarse</button>
+        <button class="tab"        data-tab="recuperar">Recuperar contraseña</button>
       </div>
 
+      <!-- Panel: Login -->
       <div id="panel-login">
-        <form id="form-login">
+        <form id="form-login" autocomplete="off">
           <div class="campo">
             <label for="login-usuario">Usuario o correo</label>
-            <input id="login-usuario" type="text" autocomplete="username" required>
+            <input id="login-usuario" type="text" autocomplete="off" required>
           </div>
           <div class="campo">
             <label for="login-password">Contraseña</label>
-            <input id="login-password" type="password" autocomplete="current-password" required>
+            <div class="campo-pwd">
+              <input id="login-password" type="password" autocomplete="off" required>
+              <button type="button" class="btn-ojo" data-target="login-password">Mostrar</button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary">Entrar</button>
         </form>
         <div id="error-login" class="alerta alerta-error oculto"></div>
       </div>
 
+      <!-- Panel: Registro -->
       <div id="panel-registro" class="oculto">
-        <form id="form-registro">
+        <form id="form-registro" autocomplete="off">
           <div class="campo">
             <label for="reg-nombre">Nombre completo</label>
             <input id="reg-nombre" type="text" required>
@@ -124,7 +149,7 @@
           </div>
           <div class="campo">
             <label for="reg-email">Correo electrónico</label>
-            <input id="reg-email" type="email" autocomplete="email" required>
+            <input id="reg-email" type="email" autocomplete="off" required>
           </div>
           <div class="campo">
             <label for="reg-telefono">Teléfono (ej: +56912345678)</label>
@@ -132,13 +157,42 @@
           </div>
           <div class="campo">
             <label for="reg-password">Contraseña</label>
-            <input id="reg-password" type="password" required>
+            <div class="campo-pwd">
+              <input id="reg-password" type="password" autocomplete="new-password" required>
+              <button type="button" class="btn-ojo" data-target="reg-password">Mostrar</button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary">Registrarse</button>
         </form>
         <div id="error-registro" class="alerta alerta-error oculto"></div>
         <div id="exito-registro" class="alerta alerta-exito oculto"></div>
       </div>
+
+      <!-- Panel: Recuperar contraseña -->
+      <div id="panel-recuperar" class="oculto">
+        <p class="nota">Ingresa tu correo y RUT registrados para verificar tu identidad y establecer una nueva contraseña.</p>
+        <form id="form-recuperar" autocomplete="off">
+          <div class="campo">
+            <label for="rec-correo">Correo electrónico</label>
+            <input id="rec-correo" type="email" autocomplete="off" required>
+          </div>
+          <div class="campo">
+            <label for="rec-rut">RUT (ej: 12.345.678-9)</label>
+            <input id="rec-rut" type="text" required>
+          </div>
+          <div class="campo">
+            <label for="rec-password">Nueva contraseña</label>
+            <div class="campo-pwd">
+              <input id="rec-password" type="password" autocomplete="new-password" required>
+              <button type="button" class="btn-ojo" data-target="rec-password">Mostrar</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Establecer contraseña</button>
+        </form>
+        <div id="error-recuperar" class="alerta alerta-error oculto"></div>
+        <div id="exito-recuperar" class="alerta alerta-exito oculto"></div>
+      </div>
+
     </div>
   </div>
 
@@ -225,7 +279,7 @@
 'use strict';
 
 /* ─── Estado global ──────────────────────────────────────────────── */
-let sesionActual = null; // { nombre, rol }
+let sesionActual = null;
 
 /* ─── Helper: llamadas a la API ──────────────────────────────────── */
 async function api(metodo, ruta, cuerpo) {
@@ -279,8 +333,46 @@ function mostrarVista(id) {
   document.getElementById(id).classList.remove('oculto');
 }
 
+/* ─── Resetear formulario de autenticación al cerrar sesión ─────── */
+function resetFormularioAuth() {
+  // Limpiar valores explícitamente (evita que el navegador restaure de caché)
+  const campos = [
+    'login-usuario', 'login-password',
+    'reg-nombre', 'reg-rut', 'reg-email', 'reg-telefono', 'reg-password',
+    'rec-correo', 'rec-rut', 'rec-password',
+  ];
+  campos.forEach(id => { const inp = document.getElementById(id); if (inp) inp.value = ''; });
+
+  // Restaurar todos los toggles a estado "Mostrar" / type=password
+  document.querySelectorAll('.btn-ojo').forEach(btn => {
+    btn.textContent = 'Mostrar';
+    const inp = document.getElementById(btn.dataset.target);
+    if (inp) inp.type = 'password';
+  });
+
+  // Limpiar todas las alertas
+  ['error-login', 'error-registro', 'exito-registro',
+   'error-recuperar', 'exito-recuperar'].forEach(ocultarAlerta);
+
+  // Activar tab "Iniciar sesión"
+  document.querySelectorAll('#tabs-auth .tab').forEach(t => t.classList.remove('activa'));
+  document.querySelector('#tabs-auth [data-tab="login"]').classList.add('activa');
+  document.getElementById('panel-login').classList.remove('oculto');
+  document.getElementById('panel-registro').classList.add('oculto');
+  document.getElementById('panel-recuperar').classList.add('oculto');
+}
+
 /* ─── Inicio ─────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', async () => {
+
+  // Toggle mostrar/ocultar contraseña
+  document.querySelectorAll('.btn-ojo').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inp = document.getElementById(btn.dataset.target);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      btn.textContent = inp.type === 'password' ? 'Mostrar' : 'Ocultar';
+    });
+  });
 
   // Tabs de autenticación
   document.getElementById('tabs-auth').addEventListener('click', ev => {
@@ -288,8 +380,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!tab) return;
     document.querySelectorAll('#tabs-auth .tab').forEach(t => t.classList.remove('activa'));
     tab.classList.add('activa');
-    document.getElementById('panel-login').classList.add('oculto');
-    document.getElementById('panel-registro').classList.add('oculto');
+    for (const p of ['login', 'registro', 'recuperar'])
+      document.getElementById('panel-' + p).classList.add('oculto');
     document.getElementById('panel-' + tab.dataset.tab).classList.remove('oculto');
   });
 
@@ -314,7 +406,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ocultarAlerta('error-login');
     try {
       sesionActual = await api('POST', '/api/login', {
-        usuario: document.getElementById('login-usuario').value.trim(),
+        usuario:  document.getElementById('login-usuario').value.trim(),
         password: document.getElementById('login-password').value,
       });
       iniciarVistaPrincipal();
@@ -339,11 +431,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (e) { mostrarAlerta('error-registro', e.message, 'error'); }
   });
 
-  // Salir
+  // Recuperar contraseña
+  document.getElementById('form-recuperar').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    ocultarAlerta('error-recuperar');
+    ocultarAlerta('exito-recuperar');
+    try {
+      await api('POST', '/api/recuperar-contrasena', {
+        correo:          document.getElementById('rec-correo').value.trim(),
+        rut:             document.getElementById('rec-rut').value.trim(),
+        nueva_password:  document.getElementById('rec-password').value,
+      });
+      document.getElementById('form-recuperar').reset();
+      // Resetear toggle del campo de la nueva contraseña
+      const btnOjo = document.querySelector('[data-target="rec-password"]');
+      if (btnOjo) { btnOjo.textContent = 'Mostrar'; document.getElementById('rec-password').type = 'password'; }
+      mostrarAlerta('exito-recuperar',
+        'Contraseña actualizada. Ya puedes iniciar sesión con la nueva contraseña.', 'exito');
+    } catch (e) { mostrarAlerta('error-recuperar', e.message, 'error'); }
+  });
+
+  // Salir — limpia formulario de login antes de mostrarlo
   document.getElementById('btn-salir').addEventListener('click', async () => {
     try { await api('POST', '/api/logout'); } catch { /* ignorar */ }
     sesionActual = null;
     document.getElementById('info-usuario').classList.add('oculto');
+    resetFormularioAuth();
     mostrarVista('vista-auth');
   });
 
@@ -354,11 +467,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     ocultarAlerta('exito-destino');
     try {
       const r = await api('POST', '/api/destinos', {
-        nombre:       document.getElementById('d-nombre').value.trim(),
-        zona:         document.getElementById('d-zona').value.trim(),
-        descripcion:  document.getElementById('d-descripcion').value.trim(),
+        nombre:        document.getElementById('d-nombre').value.trim(),
+        zona:          document.getElementById('d-zona').value.trim(),
+        descripcion:   document.getElementById('d-descripcion').value.trim(),
         duracion_dias: parseInt(document.getElementById('d-duracion').value, 10),
-        costo_base:   parseInt(document.getElementById('d-costo').value, 10),
+        costo_base:    parseInt(document.getElementById('d-costo').value, 10),
       });
       document.getElementById('form-destino').reset();
       mostrarAlerta('exito-destino', 'Destino "' + r.nombre + '" registrado.', 'exito');
@@ -374,12 +487,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const margenVal = document.getElementById('p-margen').value.trim();
     try {
       const r = await api('POST', '/api/paquetes', {
-        nombre:            document.getElementById('p-nombre').value.trim(),
-        destinos:          document.getElementById('p-destinos').value.split(',').map(s => s.trim()).filter(Boolean),
-        fecha_salida:      document.getElementById('p-salida').value,
-        fecha_regreso:     document.getElementById('p-regreso').value,
-        cupo_maximo:       parseInt(document.getElementById('p-cupo').value, 10),
-        margen_operacion:  margenVal ? parseFloat(margenVal) / 100 : 0.20,
+        nombre:           document.getElementById('p-nombre').value.trim(),
+        destinos:         document.getElementById('p-destinos').value.split(',').map(s => s.trim()).filter(Boolean),
+        fecha_salida:     document.getElementById('p-salida').value,
+        fecha_regreso:    document.getElementById('p-regreso').value,
+        cupo_maximo:      parseInt(document.getElementById('p-cupo').value, 10),
+        margen_operacion: margenVal ? parseFloat(margenVal) / 100 : 0.20,
       });
       document.getElementById('form-paquete').reset();
       mostrarAlerta('exito-paquete',
@@ -463,18 +576,18 @@ function toggleFormReserva(paquete, trPaquete, tbody) {
     if (esElMismo) return;
   }
 
-  const trF  = el('tr', null, { cls: 'fila-reservar' });
+  const trF     = el('tr', null, { cls: 'fila-reservar' });
   trF.dataset.pid = String(paquete.id);
-  const td   = el('td', null, { colspan: '6' });
-  const div  = el('div', null, { cls: 'inline-reservar' });
+  const td      = el('td', null, { colspan: '6' });
+  const div     = el('div', null, { cls: 'inline-reservar' });
 
   div.appendChild(el('label', 'Personas:'));
   const inp = el('input', null, { type: 'number', min: '1', max: String(paquete.cupo_disponible) });
   inp.value = '1';
   div.appendChild(inp);
 
-  const btnOk  = el('button', 'Confirmar', { cls: 'btn btn-sm btn-primary' });
-  const btnNo  = el('button', 'Cancelar',  { cls: 'btn btn-sm btn-secondary' });
+  const btnOk   = el('button', 'Confirmar', { cls: 'btn btn-sm btn-primary' });
+  const btnNo   = el('button', 'Cancelar',  { cls: 'btn btn-sm btn-secondary' });
   const spanErr = el('span');
   spanErr.className = 'alerta alerta-error oculto';
   spanErr.style.marginLeft = '6px';
