@@ -64,6 +64,24 @@ class SalidaRepositorio:
         ).fetchone()
         return date.fromisoformat(fila["fecha_salida"]) if fila else None
 
+    def actualizar(self, salida_id, fecha_salida, fecha_regreso, cupo_maximo):
+        ocupados = self.__cupos_ocupados(salida_id)
+        if cupo_maximo < ocupados:
+            return False
+        with self.__base_datos.transaccion() as con:
+            cursor = con.execute(
+                """UPDATE paquete_salidas
+                   SET fecha_salida = ?, fecha_regreso = ?, cupo_maximo = ?
+                   WHERE id = ?""",
+                (
+                    fecha_salida.isoformat(),
+                    fecha_regreso.isoformat(),
+                    cupo_maximo,
+                    salida_id,
+                ),
+            )
+        return cursor.rowcount > 0
+
     def __cupos_ocupados(self, salida_id):
         return self.__conexion.execute(
             """SELECT COALESCE(SUM(cantidad_personas), 0)

@@ -50,6 +50,19 @@ class PaqueteRepositorio:
                         """,
                         (cursor.lastrowid, fila["id"], orden)
                     )
+                conexion.execute(
+                    """
+                    INSERT INTO paquete_salidas (
+                        paquete_id, fecha_salida, fecha_regreso, cupo_maximo
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        cursor.lastrowid,
+                        paquete.fecha_salida.isoformat(),
+                        paquete.fecha_regreso.isoformat(),
+                        paquete.cupo_maximo,
+                    )
+                )
         except sqlite3.IntegrityError as error:
             raise PaqueteDuplicadoError(
                 f"El paquete '{paquete.nombre}' ya existe."

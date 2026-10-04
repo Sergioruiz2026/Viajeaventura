@@ -120,6 +120,29 @@ class PaqueteServicio:
         )
         return self.__salida_repo.buscar_por_id(salida_id)
 
+    def actualizar_salida(
+        self, salida_id, fecha_salida, fecha_regreso, cupo_maximo, *, sesion
+    ):
+        exigir_rol(sesion, "ADMIN")
+        if self.__salida_repo is None:
+            raise ValidacionError("Repositorio de salidas no disponible.")
+        salida = self.__salida_repo.buscar_por_id(salida_id)
+        if not salida:
+            raise ValidacionError("Salida no encontrada.")
+        if fecha_regreso <= fecha_salida:
+            raise ValidacionError(
+                "La fecha de regreso debe ser posterior a la de salida."
+            )
+        if cupo_maximo <= 0:
+            raise ValidacionError("El cupo debe ser mayor que cero.")
+        if not self.__salida_repo.actualizar(
+            salida_id, fecha_salida, fecha_regreso, cupo_maximo
+        ):
+            raise ValidacionError(
+                "El cupo no puede ser menor que las reservas activas."
+            )
+        return self.__salida_repo.buscar_por_id(salida_id)
+
     def buscar_paquete(self, nombre, *, sesion):
         exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.buscar_por_nombre(nombre)

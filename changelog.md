@@ -179,4 +179,46 @@ Resultado: 44/44 tests pasan sin regresiones.
 ### Registro de prompts en CHANGELOG
 **Prompt:** _"registra los prompts"_
 
+### 2026-10-04
+
+- **Prompt:** En paquetes, al agregar una nueva fecha de salida, conservar la fecha antigua hasta el inicio del viaje y permitir sucesivas salidas.
+- **Respuesta y acciones:** Se cambió el formulario de nueva salida para insertar una salida independiente en lugar de sobrescribir las fechas del paquete. Se agregó la salida inicial al crear paquetes, se corrigió la persistencia de `salida_id` y se ajustaron la API y las reservas para trabajar con el identificador de cada salida.
+- **Archivos modificados:** `README.md`, `CHANGELOG.md`, `api.py`, `web/index.html`, `repositorios/paquete_repositorio.py`, `repositorios/db_setup.py`, `tests/test_paquetes.py`.
+- **Validaciones:** `python -m pytest` — 45 pruebas aprobadas; diagnósticos de archivos modificados sin errores.
+
+### 2026-10-04
+
+- **Prompt:** Al agregar otra fecha aparece `Method Not Allowed` y además se necesita un botón para editar salidas.
+- **Respuesta y acciones:** Se agregó el endpoint correcto para consultar y editar salidas individuales, se incorporó el botón **Editar salidas** con edición por salida y se mantuvo la salida anterior sin sobrescribirla. También se verificó que el alta use `POST /api/paquetes/{id}/salidas`; si el navegador conserva un servidor antiguo, debe reiniciarse Uvicorn para cargar las rutas nuevas.
+- **Archivos modificados:** `api.py`, `web/index.html`, `repositorios/salida_repositorio.py`, `servicios/paquete_servicio.py`, `tests/test_paquetes.py`, `README.md`, `CHANGELOG.md`.
+- **Validaciones:** `python -m pytest` — 45 pruebas aprobadas; diagnósticos de Python sin errores.
+
+### 2026-10-04
+
+- **Prompt:** Corregir los botones de acciones para que tengan el mismo color y no aparezcan uno encima del otro.
+- **Respuesta y acciones:** Se alinearon horizontalmente los botones `+ Nueva salida` y `Editar salidas`, se igualó su color al estilo primario y se agregó una separación uniforme para evitar que se apilen.
+- **Archivos modificados:** `web/index.html`, `CHANGELOG.md`.
+- **Validaciones:** Revisión de estilos y estructura del HTML; no se modificó la lógica funcional.
+
+### 2026-10-04
+
+- **Prompt:** Corregir el error `Not Found` al seleccionar editar una salida.
+- **Respuesta y acciones:** Se agregó una ruta de edición anidada por paquete (`PATCH /api/paquetes/{paquete_id}/salidas/{salida_id}`) y la interfaz ahora la utiliza, validando que la salida pertenezca al paquete seleccionado. La ruta anterior se conserva por compatibilidad.
+- **Archivos modificados:** `api.py`, `web/index.html`, `CHANGELOG.md`.
+- **Validaciones:** Rutas verificadas en la aplicación FastAPI y diagnósticos sin errores.
+
+### 2026-10-04
+
+- **Prompt:** El botón de editar continúa mostrando `Not Found`.
+- **Respuesta y acciones:** Se reprodujo el problema y se comprobó que el código actual registra las rutas de edición, pero el proceso que atiende el puerto 8000 conserva una versión antigua de la API. La corrección requiere cerrar esa instancia de Uvicorn y reiniciar la API desde `C:\viajeaventura` con el intérprete del entorno virtual.
+- **Archivos modificados:** `CHANGELOG.md`.
+- **Validaciones:** La aplicación actual expone `GET /api/paquetes/{paquete_id}/salidas`, `PATCH /api/salidas/{salida_id}` y `PATCH /api/paquetes/{paquete_id}/salidas/{salida_id}`; diagnósticos sin errores.
+
+### 2026-10-04
+
+- **Prompt:** El error `Not Found` y `Method Not Allowed` continúa apareciendo al editar o agregar una salida.
+- **Respuesta y acciones:** Se corrigió la inicialización de bases existentes: `salida_id` ahora se agrega antes de crear los índices y triggers que lo utilizan. El fallo real era `sqlite3.OperationalError: no such column: salida_id`, que provocaba errores del servidor y ocultaba el problema detrás de la interfaz.
+- **Archivos modificados:** `repositorios/db_setup.py`, `CHANGELOG.md`.
+- **Validaciones:** Se verificó el traceback del servidor; se ejecutarán las pruebas completas y una comprobación de arranque con la base existente.
+
 Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registro.

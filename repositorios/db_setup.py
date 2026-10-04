@@ -224,6 +224,21 @@ class BaseDatos:
             )
 
     def __crear_esquema(self):
+        reservas_existe = self.__conexion.execute(
+            "SELECT COUNT(*) FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'reservas'"
+        ).fetchone()[0]
+        if reservas_existe:
+            salida_id_existe = self.__conexion.execute(
+                "SELECT COUNT(*) FROM pragma_table_info('reservas') "
+                "WHERE name = 'salida_id'"
+            ).fetchone()[0]
+            if not salida_id_existe:
+                self.__conexion.execute(
+                    "ALTER TABLE reservas ADD COLUMN salida_id INTEGER"
+                )
+                self.__conexion.commit()
+
         # Eliminar triggers obsoletos antes de recrearlos con soporte de salidas
         self.__conexion.executescript(
             """
@@ -322,6 +337,8 @@ class BaseDatos:
                 usuario_id INTEGER NOT NULL REFERENCES usuarios(id)
                     ON DELETE RESTRICT,
                 paquete_id INTEGER NOT NULL REFERENCES paquetes(id)
+                    ON DELETE RESTRICT,
+                salida_id INTEGER REFERENCES paquete_salidas(id)
                     ON DELETE RESTRICT,
                 cantidad_personas INTEGER NOT NULL CHECK (cantidad_personas >= 1),
                 fecha_emision TEXT NOT NULL,

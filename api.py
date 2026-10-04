@@ -83,6 +83,10 @@ class NuevaSalidaRequest(BaseModel):
     cupo_maximo: int
 
 
+class ActualizarSalidaRequest(NuevaSalidaRequest):
+    pass
+
+
 class RecuperarContrasenaRequest(BaseModel):
     correo: str
     rut: str
@@ -129,6 +133,20 @@ def _serializar_paquete(p) -> dict:
         "cupo_disponible": p.cupo_disponible,
         "margen_operacion": float(p.margen_operacion),
         "estado": p.estado,
+    }
+
+
+def _serializar_salida(salida) -> dict:
+    return {
+        "id": salida.id,
+        "paquete_id": salida.paquete_id,
+        "nombre": salida.paquete_nombre,
+        "precio_por_persona": int(salida.precio_por_persona),
+        "fecha_salida": salida.fecha_salida.isoformat(),
+        "fecha_regreso": salida.fecha_regreso.isoformat(),
+        "cupo_maximo": salida.cupo_maximo,
+        "cupo_disponible": salida.cupo_disponible,
+        "estado": "Vigente",
     }
 
 
@@ -332,11 +350,91 @@ def crear_app(servicio=None):
         try:
             if sesion.rol == "ADMIN":
                 lista = svcs.paquetes.listar_paquetes(sesion=sesion)
+                respuesta = [_serializar_paquete(p) for p in lista]
             else:
                 lista = svcs.paquetes.listar_vigentes(sesion=sesion)
+                respuesta = [_serializar_salida(salida) for salida in lista]
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e
-        return [_serializar_paquete(p) for p in lista]
+        return respuesta
+
+    @app.post("/api/paquetes/{paquete_id}/salidas", status_code=201)
+    def agregar_salida(
+        paquete_id: int,
+        datos: NuevaSalidaRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            salida = svcs.paquetes.agregar_salida(
+                paquete_id,
+                datos.fecha_salida,
+                datos.fecha_regreso,
+                datos.cupo_maximo,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return _serializar_salida(salida)
+
+    @app.get("/api/paquetes/{paquete_id}/salidas")
+    def listar_salidas(
+        paquete_id: int,
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            salidas = svcs.paquetes.listar_salidas_por_paquete(
+                paquete_id, sesion=sesion
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return [_serializar_salida(salida) for salida in salidas]
+
+    @app.patch("/api/salidas/{salida_id}")
+    def actualizar_salida(
+        salida_id: int,
+        datos: ActualizarSalidaRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            salida = svcs.paquetes.actualizar_salida(
+                salida_id,
+                datos.fecha_salida,
+                datos.fecha_regreso,
+                datos.cupo_maximo,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return _serializar_salida(salida)
+
+    @app.patch("/api/paquetes/{paquete_id}/salidas/{salida_id}")
+    def actualizar_salida_del_paquete(
+        paquete_id: int,
+        salida_id: int,
+        datos: ActualizarSalidaRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            salida = svcs.salidas.buscar_por_id(salida_id)
+            if not salida or salida.paquete_id != paquete_id:
+                raise ValidacionError("Salida no encontrada para este paquete.")
+            salida = svcs.paquetes.actualizar_salida(
+                salida_id,
+                datos.fecha_salida,
+                datos.fecha_regreso,
+                datos.cupo_maximo,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return _serializar_salida(salida)
 
     @app.patch("/api/paquetes/{paquete_id}")
     def actualizar_paquete(
@@ -416,7 +514,8 @@ def crear_app(servicio=None):
     ):
         try:
             r = svcs.reservas.crear_reserva(
-                sesion, datos.paquete_id, datos.cantidad_personas
+                sesion, None, datos.cantidad_personas,
+                salida_id=datos.salida_id,
             )
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e

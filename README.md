@@ -51,6 +51,12 @@ menú ADMIN, donde se deben definir sus fechas y cupo.
 También se solicita el margen de operación como porcentaje; si se deja vacío,
 se aplica el valor predeterminado de 20 %.
 
+Un paquete puede tener varias salidas. Al agregar una nueva fecha desde la
+interfaz web, la salida anterior se conserva con sus propias fechas y cupo;
+cada salida mantiene sus reservas y disponibilidad de forma independiente.
+En el panel ADMIN, **Editar salidas** permite modificar una salida concreta
+sin cambiar las demás.
+
 ## API de registro
 
 Inicia la API con `python -m uvicorn api:app --reload`. El registro está disponible en `POST /clientes/registro` y recibe un JSON con `nombre`, `rut`, `email`, `telefono` y `password`. Responde con HTTP 201 al registrar, HTTP 409 si el correo ya existe y HTTP 422 ante datos inválidos. La respuesta no incluye RUT, teléfono ni contraseña.

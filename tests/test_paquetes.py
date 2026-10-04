@@ -9,6 +9,7 @@ from modelos.sesion import Sesion
 from repositorios.base_datos import BaseDatos
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
+from repositorios.salida_repositorio import SalidaRepositorio
 from servicios.paquete_servicio import PaqueteServicio
 
 
@@ -158,6 +159,47 @@ class GestionPaquetesTests(unittest.TestCase):
             {"Vencido": "Vencido", "Hoy": "Vencido", "Vigente": "Vigente"}
         )
         self.assertIn("Vencido", str(todos[0]))
+
+    def test_agregar_salida_conserva_la_salida_anterior(self):
+        salida_inicial = date.today() + timedelta(days=30)
+        self.crear_paquete("Salidas múltiples", salida_inicial)
+        paquete_id = self.base_datos.conexion.execute(
+            "SELECT id FROM paquetes WHERE nombre = ?",
+            ("Salidas múltiples",),
+        ).fetchone()["id"]
+        salidas = SalidaRepositorio(self.base_datos)
+        servicio = PaqueteServicio(
+            self.paquete_repo, self.destinos, salidas
+        )
+
+        nueva_salida = salida_inicial + timedelta(days=30)
+        agregada = servicio.agregar_salida(
+            paquete_id,
+            nueva_salida,
+            nueva_salida + timedelta(days=5),
+            6,
+            sesion=self.admin,
+        )
+
+        guardadas = salidas.listar_por_paquete(paquete_id)
+        self.assertEqual(len(guardadas), 2)
+        self.assertEqual(
+            [salida.fecha_salida for salida in guardadas],
+            [salida_inicial, nueva_salida],
+        )
+        self.assertEqual(agregada.cupo_maximo, 6)
+
+        editada = servicio.actualizar_salida(
+            agregada.id,
+            nueva_salida + timedelta(days=1),
+            nueva_salida + timedelta(days=6),
+            7,
+            sesion=self.admin,
+        )
+        guardadas = salidas.listar_por_paquete(paquete_id)
+        self.assertEqual(editada.cupo_maximo, 7)
+        self.assertEqual(guardadas[0].fecha_salida, salida_inicial)
+        self.assertEqual(guardadas[1].fecha_salida, nueva_salida + timedelta(days=1))
 
 
 if __name__ == "__main__":

@@ -94,6 +94,11 @@
     .inline-reservar input { width: 72px; }
 
     .nav-admin { display: flex; gap: 4px; margin-bottom: 0; }
+    .acciones-paquete {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: nowrap; white-space: nowrap;
+      min-width: 225px;
+    }
   </style>
 </head>
 <body>
@@ -632,7 +637,7 @@ function toggleFormReserva(paquete, trPaquete, tbody) {
     }
     btnOk.disabled = true;
     try {
-      await api('POST', '/api/reservas', { paquete_id: paquete.id, cantidad_personas: personas });
+      await api('POST', '/api/reservas', { salida_id: paquete.id, cantidad_personas: personas });
       trF.remove();
       cargarPaquetesCliente();
       cargarReservasCliente();
@@ -763,12 +768,106 @@ async function cargarPaquetesAdmin() {
       const tdEst = el('td', p.estado);
       tdEst.className = p.estado === 'Vigente' ? 'estado-vigente' : 'estado-vencido';
       tr.appendChild(tdEst);
-      const tdAcc = el('td');
+      const tdAcc = el('td', null, { cls: 'acciones-paquete' });
       const btnEdit = el('button', '+ Nueva salida', { cls: 'btn btn-sm btn-primary' });
       btnEdit.addEventListener('click', () => toggleFormNuevaSalida(p, tr, tbody));
       tdAcc.appendChild(btnEdit);
+      const btnSalidas = el('button', 'Editar salidas', { cls: 'btn btn-sm btn-primary' });
+      btnSalidas.addEventListener('click', () => toggleSalidas(p, tr, tbody));
+      tdAcc.appendChild(btnSalidas);
       tr.appendChild(tdAcc);
       tbody.appendChild(tr);
+    }
+
+    async function toggleSalidas(paquete, trPaquete, tbody) {
+      const anterior = tbody.querySelector('.fila-salidas');
+      if (anterior) {
+        anterior.remove();
+        return;
+      }
+      const fila = el('tr', null, { cls: 'fila-salidas' });
+      const celda = el('td', 'Cargando salidas…', { colspan: '9' });
+      fila.appendChild(celda);
+      trPaquete.after(fila);
+      try {
+        const salidas = await api('GET', '/api/paquetes/' + paquete.id + '/salidas');
+        celda.textContent = '';
+        if (!salidas.length) {
+          celda.textContent = 'No hay salidas registradas.';
+          return;
+        }
+        for (const salida of salidas) {
+          const bloque = el('div');
+          bloque.style.cssText = 'padding:8px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+          bloque.appendChild(el('span',
+            '#' + salida.id + ' | ' + fFecha(salida.fecha_salida) + ' → ' +
+            fFecha(salida.fecha_regreso) + ' | Cupo: ' + salida.cupo_maximo +
+            ' (disponibles: ' + salida.cupo_disponible + ')'
+          ));
+          const boton = el('button', 'Editar', { cls: 'btn btn-sm btn-secondary' });
+          boton.addEventListener('click', () =>
+            toggleFormEditarSalida(salida, fila, bloque)
+          );
+          bloque.appendChild(boton);
+          celda.appendChild(bloque);
+        }
+      } catch (e) {
+        celda.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    function toggleFormEditarSalida(salida, filaSalidas, bloqueSalida) {
+      const previo = filaSalidas.querySelector('.form-editar-salida');
+      if (previo) {
+        previo.remove();
+        return;
+      }
+      const form = el('div', null, { cls: 'form-editar-salida' });
+      form.style.cssText = 'display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:8px 0';
+      const salidaInput = el('input', null, { type: 'date' });
+      const regresoInput = el('input', null, { type: 'date' });
+      const cupoInput = el('input', null, { type: 'number', min: '1' });
+      salidaInput.value = salida.fecha_salida;
+      regresoInput.value = salida.fecha_regreso;
+      cupoInput.value = salida.cupo_maximo;
+      form.appendChild(campoInlineSimple('Salida', salidaInput));
+      form.appendChild(campoInlineSimple('Regreso', regresoInput));
+      form.appendChild(campoInlineSimple('Cupo', cupoInput));
+      const guardar = el('button', 'Guardar cambios', { cls: 'btn btn-sm btn-primary' });
+      const cancelar = el('button', 'Cancelar', { cls: 'btn btn-sm btn-secondary' });
+      form.appendChild(guardar);
+      form.appendChild(cancelar);
+      cancelar.addEventListener('click', () => form.remove());
+      guardar.addEventListener('click', async () => {
+        guardar.disabled = true;
+        try {
+          await api(
+            'PATCH',
+            '/api/paquetes/' + salida.paquete_id + '/salidas/' + salida.id,
+            {
+            fecha_salida: salidaInput.value,
+            fecha_regreso: regresoInput.value,
+            cupo_maximo: parseInt(cupoInput.value, 10),
+            }
+          );
+          form.remove();
+          bloqueSalida.firstChild.textContent =
+            '#' + salida.id + ' | ' + fFecha(salidaInput.value) + ' → ' +
+            fFecha(regresoInput.value) + ' | Cupo: ' + cupoInput.value;
+        } catch (e) {
+          alert(e.message);
+          guardar.disabled = false;
+        }
+      });
+      bloqueSalida.appendChild(form);
+    }
+
+    function campoInlineSimple(label, input) {
+      const cont = el('label');
+      cont.textContent = label;
+      cont.style.cssText = 'display:flex;flex-direction:column;gap:3px';
+      cont.appendChild(input);
+      return cont;
     }
     tabla.appendChild(tbody);
     cont.appendChild(tabla);
@@ -856,7 +955,7 @@ function toggleFormNuevaSalida(paquete, trPaquete, tbody) {
     btnGuardar.disabled = true;
     errDiv.classList.add('oculto');
     try {
-      const res = await api('PATCH', '/api/paquetes/' + paquete.id, {
+      const res = await api('POST', '/api/paquetes/' + paquete.id + '/salidas', {
         fecha_salida:  inpSalida.value,
         fecha_regreso: inpRegreso.value,
         cupo_maximo:   parseInt(inpCupo.value, 10) || paquete.cupo_maximo,
