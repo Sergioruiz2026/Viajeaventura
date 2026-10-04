@@ -86,6 +86,33 @@ class PaqueteRepositorio:
         except sqlite3.IntegrityError:
             return False
 
+    def actualizar(self, paquete_id, nombre, fecha_salida, fecha_regreso,
+                   cupo_maximo, margen_operacion, precio_publicado):
+        try:
+            with self.__base_datos.transaccion() as conexion:
+                cursor = conexion.execute(
+                    """
+                    UPDATE paquetes
+                    SET nombre = ?, fecha_salida = ?, fecha_regreso = ?,
+                        cupo_maximo = ?, margen_operacion = ?, precio_publicado = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        nombre,
+                        fecha_salida.isoformat(),
+                        fecha_regreso.isoformat(),
+                        cupo_maximo,
+                        float(margen_operacion),
+                        precio_publicado,
+                        paquete_id
+                    )
+                )
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError as error:
+            raise PaqueteDuplicadoError(
+                "Ya existe un paquete con ese nombre."
+            ) from error
+
     def paquetes_vigentes(self):
         return [paquete for paquete in self.listar() if not paquete.esta_vencido()]
 

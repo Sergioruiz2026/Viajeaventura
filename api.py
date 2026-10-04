@@ -82,6 +82,14 @@ class RecuperarContrasenaRequest(BaseModel):
     nueva_password: str
 
 
+class ActualizarPaqueteRequest(BaseModel):
+    nombre: str | None = None
+    fecha_salida: date | None = None
+    fecha_regreso: date | None = None
+    cupo_maximo: int | None = None
+    margen_operacion: Decimal | None = None
+
+
 # ---------------------------------------------------------------------------
 # Almacén de sesiones en memoria
 # ---------------------------------------------------------------------------
@@ -101,6 +109,20 @@ def _sanitizar_detalle(detalle):
     if isinstance(detalle, dict):
         return {k: _sanitizar_detalle(v) for k, v in detalle.items()}
     return detalle
+
+
+def _serializar_paquete(p) -> dict:
+    return {
+        "id": p.id,
+        "nombre": p.nombre,
+        "precio_por_persona": int(p.precio_por_persona),
+        "fecha_salida": p.fecha_salida.isoformat(),
+        "fecha_regreso": p.fecha_regreso.isoformat(),
+        "cupo_maximo": p.cupo_maximo,
+        "cupo_disponible": p.cupo_disponible,
+        "margen_operacion": float(p.margen_operacion),
+        "estado": p.estado,
+    }
 
 
 def _exc_a_http(error: ViajesAventuraError) -> HTTPException:
@@ -305,18 +327,29 @@ def crear_app(servicio=None):
                 lista = svcs.paquetes.listar_vigentes(sesion=sesion)
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e
-        return [
-            {
-                "id": p.id,
-                "nombre": p.nombre,
-                "precio_por_persona": int(p.precio_por_persona),
-                "fecha_salida": p.fecha_salida.isoformat(),
-                "fecha_regreso": p.fecha_regreso.isoformat(),
-                "cupo_disponible": p.cupo_disponible,
-                "estado": p.estado,
-            }
-            for p in lista
-        ]
+        return [_serializar_paquete(p) for p in lista]
+
+    @app.patch("/api/paquetes/{paquete_id}")
+    def actualizar_paquete(
+        paquete_id: int,
+        datos: ActualizarPaqueteRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            p = svcs.paquetes.actualizar_paquete(
+                paquete_id,
+                nombre=datos.nombre,
+                fecha_salida=datos.fecha_salida,
+                fecha_regreso=datos.fecha_regreso,
+                cupo_maximo=datos.cupo_maximo,
+                margen_operacion=datos.margen_operacion,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return _serializar_paquete(p)
 
     @app.post("/api/paquetes", status_code=201)
     def crear_paquete(

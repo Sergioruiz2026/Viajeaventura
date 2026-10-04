@@ -4,7 +4,7 @@ from decimal import Decimal, DecimalException
 
 from modelos.paquete import Paquete
 from excepciones import ValidacionError
-from seguridad.montos import a_decimal
+from seguridad.montos import a_decimal, aplicar_margen_clp
 from seguridad.autorizacion import exigir_rol
 from seguridad.normalizador import capitalizar_titulo
 
@@ -94,6 +94,64 @@ class PaqueteServicio:
     def buscar_paquete(self, nombre, *, sesion):
         exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.buscar_por_nombre(nombre)
+
+    def actualizar_paquete(
+        self,
+        paquete_id,
+        nombre=None,
+        fecha_salida=None,
+        fecha_regreso=None,
+        cupo_maximo=None,
+        margen_operacion=None,
+        *,
+        sesion
+    ):
+        exigir_rol(sesion, "ADMIN")
+        paquete = self.__paquete_repo.buscar_por_id(paquete_id)
+        if not paquete:
+            raise ValidacionError("Paquete no encontrado.")
+
+        nuevo_nombre = (
+            capitalizar_titulo(nombre.strip())
+            if isinstance(nombre, str) and nombre.strip()
+            else paquete.nombre
+        )
+        nueva_salida  = fecha_salida  if fecha_salida  is not None else paquete.fecha_salida
+        nuevo_regreso = fecha_regreso if fecha_regreso is not None else paquete.fecha_regreso
+        nuevo_cupo    = cupo_maximo   if cupo_maximo   is not None else paquete.cupo_maximo
+
+        if nuevo_regreso <= nueva_salida:
+            raise ValidacionError(
+                "La fecha de regreso debe ser posterior a la de salida."
+            )
+        if nuevo_cupo <= 0:
+            raise ValidacionError("El cupo debe ser mayor que cero.")
+
+        reservado = paquete.cupo_maximo - paquete.cupo_disponible
+        if nuevo_cupo < reservado:
+            raise ValidacionError(
+                f"El cupo no puede quedar por debajo de las "
+                f"{reservado} reservas activas."
+            )
+
+        if margen_operacion is not None:
+            nuevo_margen = a_decimal(margen_operacion)
+            if not nuevo_margen.is_finite() or nuevo_margen < 0:
+                raise ValidacionError("El margen no puede ser negativo.")
+            costo_total = sum(
+                (a_decimal(d.costo_base) for d in paquete.destinos),
+                start=a_decimal(0)
+            )
+            nuevo_precio = int(aplicar_margen_clp(costo_total, nuevo_margen))
+        else:
+            nuevo_margen = paquete.margen_operacion
+            nuevo_precio = int(paquete.precio_por_persona)
+
+        self.__paquete_repo.actualizar(
+            paquete_id, nuevo_nombre, nueva_salida, nuevo_regreso,
+            nuevo_cupo, nuevo_margen, nuevo_precio
+        )
+        return self.__paquete_repo.buscar_por_id(paquete_id)
 
     def eliminar_paquete(self, nombre, *, sesion):
         exigir_rol(sesion, "ADMIN")
