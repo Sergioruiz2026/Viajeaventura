@@ -235,4 +235,11 @@ Resultado: 44/44 tests pasan sin regresiones.
 - **Archivos modificados:** `api.py`, `web/index.html`, `CHANGELOG.md`.
 - **Validaciones:** Diagnósticos sin errores; se mantiene la separación por `salida_id`.
 
+### 2026-10-04
+
+- **Prompt:** Eliminar el botón Editar y mostrar en pantalla la nueva fecha agregada.
+- **Respuesta y acciones:** Se eliminó el botón y el formulario de edición de salidas del listado ADMIN. Las salidas se muestran directamente como filas independientes; después de agregar una fecha se recarga el listado completo desde la API para mostrarla inmediatamente.
+- **Archivos modificados:** `web/index.html`, `README.md`, `CHANGELOG.md`.
+- **Validaciones:** Diagnósticos del HTML sin errores y `git diff --check`.
+
 Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registro.

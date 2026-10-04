@@ -776,13 +776,6 @@ async function cargarPaquetesAdmin() {
         tdEst.className = vigente ? 'estado-vigente' : 'estado-vencido';
         tr.appendChild(tdEst);
         const tdAcc = el('td', null, { cls: 'acciones-paquete' });
-        const botonEditar = el('button', 'Editar', { cls: 'btn btn-sm btn-primary' });
-        if (salida.id) {
-          botonEditar.addEventListener('click', () =>
-            toggleFormEditarSalida(salida, tbody, tdAcc)
-          );
-          tdAcc.appendChild(botonEditar);
-        }
         if (indice === 0) {
           const btnNueva = el('button', '+ Nueva salida', { cls: 'btn btn-sm btn-primary' });
           btnNueva.addEventListener('click', () => toggleFormNuevaSalida(p, tr, tbody));
@@ -793,57 +786,6 @@ async function cargarPaquetesAdmin() {
       });
     }
 
-    function toggleFormEditarSalida(salida, tbody, acciones) {
-      const previo = tbody.querySelector('.form-editar-salida');
-      if (previo) {
-        previo.remove();
-        return;
-      }
-      const form = el('div', null, { cls: 'form-editar-salida' });
-      form.style.cssText = 'display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:8px 0';
-      const salidaInput = el('input', null, { type: 'date' });
-      const regresoInput = el('input', null, { type: 'date' });
-      const cupoInput = el('input', null, { type: 'number', min: '1' });
-      salidaInput.value = salida.fecha_salida;
-      regresoInput.value = salida.fecha_regreso;
-      cupoInput.value = salida.cupo_maximo;
-      form.appendChild(campoInlineSimple('Salida', salidaInput));
-      form.appendChild(campoInlineSimple('Regreso', regresoInput));
-      form.appendChild(campoInlineSimple('Cupo', cupoInput));
-      const guardar = el('button', 'Guardar cambios', { cls: 'btn btn-sm btn-primary' });
-      const cancelar = el('button', 'Cancelar', { cls: 'btn btn-sm btn-secondary' });
-      form.appendChild(guardar);
-      form.appendChild(cancelar);
-      cancelar.addEventListener('click', () => form.remove());
-      guardar.addEventListener('click', async () => {
-        guardar.disabled = true;
-        try {
-          await api(
-            'PATCH',
-            '/api/paquetes/' + salida.paquete_id + '/salidas/' + salida.id,
-            {
-            fecha_salida: salidaInput.value,
-            fecha_regreso: regresoInput.value,
-            cupo_maximo: parseInt(cupoInput.value, 10),
-            }
-          );
-          form.remove();
-          cargarPaquetesAdmin();
-        } catch (e) {
-          alert(e.message);
-          guardar.disabled = false;
-        }
-      });
-      acciones.appendChild(form);
-    }
-
-    function campoInlineSimple(label, input) {
-      const cont = el('label');
-      cont.textContent = label;
-      cont.style.cssText = 'display:flex;flex-direction:column;gap:3px';
-      cont.appendChild(input);
-      return cont;
-    }
     tabla.appendChild(tbody);
     cont.appendChild(tabla);
   } catch (e) { cont.textContent = 'Error: ' + e.message; }

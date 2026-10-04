@@ -54,8 +54,7 @@ se aplica el valor predeterminado de 20 %.
 Un paquete puede tener varias salidas. Al agregar una nueva fecha desde la
 interfaz web, la salida anterior se conserva con sus propias fechas y cupo;
 cada salida mantiene sus reservas y disponibilidad de forma independiente.
-En el panel ADMIN, **Editar salidas** permite modificar una salida concreta
-sin cambiar las demás.
+En el panel ADMIN, todas las salidas se muestran como filas independientes.
 
 ## API de registro
 
