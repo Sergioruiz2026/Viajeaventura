@@ -1,4 +1,4 @@
-"""" implementacion de la clase Cliente para el proyecto ViajesAventura"""
+"""implementacion de la clase Cliente para el proyecto ViajesAventura"""
 
 from seguridad.enmascarado import mask_phone, mask_rut
 

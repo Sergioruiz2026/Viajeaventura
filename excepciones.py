@@ -2,31 +2,31 @@
 
 
 class ViajesAventuraError(Exception):
-	pass
+    pass
 
 class ValidacionError(ViajesAventuraError):
-	pass
+    pass
 
 class DestinoDuplicadoError(ViajesAventuraError):
-	pass
+    pass
 
 class PaqueteDuplicadoError(ViajesAventuraError):
-	pass
+    pass
 
 class CorreoDuplicadoError(ViajesAventuraError):
-	pass
+    pass
 
 class CupoInsuficienteError(ViajesAventuraError):
-	pass
+    pass
 
 class ReservaNoPermitidaError(ViajesAventuraError):
-	pass
+    pass
 
 class AutenticacionError(ViajesAventuraError):
-	pass
+    pass
 
 class AutorizacionError(ViajesAventuraError):
-	pass
+    pass
 
 class SesionExpiradaError(AutenticacionError):
-	pass
+    pass

@@ -1,4 +1,4 @@
-""""implementacion de la clase reserva para el proyecto ViajesAventura"""
+"""implementacion de la clase reserva para el proyecto ViajesAventura"""
 
 from datetime import datetime
 

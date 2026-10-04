@@ -1,4 +1,4 @@
-"""" implementacion de la clase Administrador para el proyecto ViajesAventura"""
+"""implementacion de la clase Administrador para el proyecto ViajesAventura"""
 
 class Administrador:
     def __init__(self, usuario):

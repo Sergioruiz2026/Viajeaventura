@@ -1,6 +1,5 @@
-"""" creacion de repositorio (paquete_repositorio) para el proyecto ViajesAventura"""
+"""creacion de repositorio (paquete_repositorio) para el proyecto ViajesAventura"""
 
-from excepciones import PaqueteDuplicadoError
 import sqlite3
 from datetime import date
 
