@@ -122,8 +122,8 @@ def _sanitizar_detalle(detalle):
     return detalle
 
 
-def _serializar_paquete(p) -> dict:
-    return {
+def _serializar_paquete(p, salidas=None) -> dict:
+    paquete = {
         "id": p.id,
         "nombre": p.nombre,
         "precio_por_persona": int(p.precio_por_persona),
@@ -134,6 +134,9 @@ def _serializar_paquete(p) -> dict:
         "margen_operacion": float(p.margen_operacion),
         "estado": p.estado,
     }
+    if salidas is not None:
+        paquete["salidas"] = [_serializar_salida(salida) for salida in salidas]
+    return paquete
 
 
 def _serializar_salida(salida) -> dict:
@@ -350,7 +353,15 @@ def crear_app(servicio=None):
         try:
             if sesion.rol == "ADMIN":
                 lista = svcs.paquetes.listar_paquetes(sesion=sesion)
-                respuesta = [_serializar_paquete(p) for p in lista]
+                respuesta = [
+                    _serializar_paquete(
+                        p,
+                        svcs.paquetes.listar_salidas_por_paquete(
+                            p.id, sesion=sesion
+                        ),
+                    )
+                    for p in lista
+                ]
             else:
                 lista = svcs.paquetes.listar_vigentes(sesion=sesion)
                 respuesta = [_serializar_salida(salida) for salida in lista]

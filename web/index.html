@@ -757,67 +757,44 @@ async function cargarPaquetesAdmin() {
     tabla.appendChild(thead);
     const tbody = el('tbody');
     for (const p of lista) {
-      const tr = el('tr');
-      tr.appendChild(el('td', String(p.id)));
-      tr.appendChild(el('td', fTitulo(p.nombre)));
-      tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
-      tr.appendChild(el('td', fFecha(p.fecha_salida)));
-      tr.appendChild(el('td', fFecha(p.fecha_regreso)));
-      tr.appendChild(el('td', String(p.cupo_maximo)));
-      tr.appendChild(el('td', String(p.cupo_disponible)));
-      const tdEst = el('td', p.estado);
-      tdEst.className = p.estado === 'Vigente' ? 'estado-vigente' : 'estado-vencido';
-      tr.appendChild(tdEst);
-      const tdAcc = el('td', null, { cls: 'acciones-paquete' });
-      const btnEdit = el('button', '+ Nueva salida', { cls: 'btn btn-sm btn-primary' });
-      btnEdit.addEventListener('click', () => toggleFormNuevaSalida(p, tr, tbody));
-      tdAcc.appendChild(btnEdit);
-      const btnSalidas = el('button', 'Editar salidas', { cls: 'btn btn-sm btn-primary' });
-      btnSalidas.addEventListener('click', () => toggleSalidas(p, tr, tbody));
-      tdAcc.appendChild(btnSalidas);
-      tr.appendChild(tdAcc);
-      tbody.appendChild(tr);
-    }
-
-    async function toggleSalidas(paquete, trPaquete, tbody) {
-      const anterior = tbody.querySelector('.fila-salidas');
-      if (anterior) {
-        anterior.remove();
-        return;
-      }
-      const fila = el('tr', null, { cls: 'fila-salidas' });
-      const celda = el('td', 'Cargando salidas…', { colspan: '9' });
-      fila.appendChild(celda);
-      trPaquete.after(fila);
-      try {
-        const salidas = await api('GET', '/api/paquetes/' + paquete.id + '/salidas');
-        celda.textContent = '';
-        if (!salidas.length) {
-          celda.textContent = 'No hay salidas registradas.';
-          return;
-        }
-        for (const salida of salidas) {
-          const bloque = el('div');
-          bloque.style.cssText = 'padding:8px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
-          bloque.appendChild(el('span',
-            '#' + salida.id + ' | ' + fFecha(salida.fecha_salida) + ' → ' +
-            fFecha(salida.fecha_regreso) + ' | Cupo: ' + salida.cupo_maximo +
-            ' (disponibles: ' + salida.cupo_disponible + ')'
-          ));
-          const boton = el('button', 'Editar', { cls: 'btn btn-sm btn-secondary' });
-          boton.addEventListener('click', () =>
-            toggleFormEditarSalida(salida, fila, bloque)
+      const salidas = p.salidas && p.salidas.length ? p.salidas : [{
+        id: null, paquete_id: p.id, fecha_salida: p.fecha_salida,
+        fecha_regreso: p.fecha_regreso, cupo_maximo: p.cupo_maximo,
+        cupo_disponible: p.cupo_disponible,
+      }];
+      salidas.forEach((salida, indice) => {
+        const tr = el('tr');
+        tr.appendChild(el('td', String(salida.id || p.id)));
+        tr.appendChild(el('td', fTitulo(p.nombre)));
+        tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
+        tr.appendChild(el('td', fFecha(salida.fecha_salida)));
+        tr.appendChild(el('td', fFecha(salida.fecha_regreso)));
+        tr.appendChild(el('td', String(salida.cupo_maximo)));
+        tr.appendChild(el('td', String(salida.cupo_disponible)));
+        const vigente = salida.fecha_salida > new Date().toISOString().slice(0, 10);
+        const tdEst = el('td', vigente ? 'Vigente' : 'Vencido');
+        tdEst.className = vigente ? 'estado-vigente' : 'estado-vencido';
+        tr.appendChild(tdEst);
+        const tdAcc = el('td', null, { cls: 'acciones-paquete' });
+        const botonEditar = el('button', 'Editar', { cls: 'btn btn-sm btn-primary' });
+        if (salida.id) {
+          botonEditar.addEventListener('click', () =>
+            toggleFormEditarSalida(salida, tbody, tdAcc)
           );
-          bloque.appendChild(boton);
-          celda.appendChild(bloque);
+          tdAcc.appendChild(botonEditar);
         }
-      } catch (e) {
-        celda.textContent = 'Error: ' + e.message;
-      }
+        if (indice === 0) {
+          const btnNueva = el('button', '+ Nueva salida', { cls: 'btn btn-sm btn-primary' });
+          btnNueva.addEventListener('click', () => toggleFormNuevaSalida(p, tr, tbody));
+          tdAcc.appendChild(btnNueva);
+        }
+        tr.appendChild(tdAcc);
+        tbody.appendChild(tr);
+      });
     }
 
-    function toggleFormEditarSalida(salida, filaSalidas, bloqueSalida) {
-      const previo = filaSalidas.querySelector('.form-editar-salida');
+    function toggleFormEditarSalida(salida, tbody, acciones) {
+      const previo = tbody.querySelector('.form-editar-salida');
       if (previo) {
         previo.remove();
         return;
@@ -851,15 +828,13 @@ async function cargarPaquetesAdmin() {
             }
           );
           form.remove();
-          bloqueSalida.firstChild.textContent =
-            '#' + salida.id + ' | ' + fFecha(salidaInput.value) + ' → ' +
-            fFecha(regresoInput.value) + ' | Cupo: ' + cupoInput.value;
+          cargarPaquetesAdmin();
         } catch (e) {
           alert(e.message);
           guardar.disabled = false;
         }
       });
-      bloqueSalida.appendChild(form);
+      acciones.appendChild(form);
     }
 
     function campoInlineSimple(label, input) {

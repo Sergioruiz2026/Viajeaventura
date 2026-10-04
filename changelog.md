@@ -221,4 +221,18 @@ Resultado: 44/44 tests pasan sin regresiones.
 - **Archivos modificados:** `repositorios/db_setup.py`, `CHANGELOG.md`.
 - **Validaciones:** Se verificó el traceback del servidor; se ejecutarán las pruebas completas y una comprobación de arranque con la base existente.
 
+### 2026-10-04
+
+- **Prompt:** El error `Method Not Allowed` continúa apareciendo después de reiniciar.
+- **Respuesta y acciones:** Se inspeccionaron los registros del servidor y se confirmó que la versión actual ya procesa correctamente `PATCH /api/paquetes/1/salidas/1` con HTTP 200 y `POST /api/paquetes/1/salidas` con HTTP 201. El mensaje visible correspondía a un estado anterior de la página; se verificó además que el frontend entregado contiene las llamadas actuales.
+- **Archivos modificados:** `CHANGELOG.md`.
+- **Validaciones:** Logs de Uvicorn: edición 200 y creación 201; rutas de salidas presentes en OpenAPI.
+
+### 2026-10-04
+
+- **Prompt:** Mostrar las nuevas fechas igual que la primera y editar únicamente la salida seleccionada.
+- **Respuesta y acciones:** El listado ADMIN ahora recibe todas las salidas y muestra cada una como una fila normal con fecha, regreso, cupo y disponibilidad. El botón `Editar` se coloca en cada fila y, al guardar, se recarga la tabla para reflejar únicamente la salida modificada.
+- **Archivos modificados:** `api.py`, `web/index.html`, `CHANGELOG.md`.
+- **Validaciones:** Diagnósticos sin errores; se mantiene la separación por `salida_id`.
+
 Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registro.
