@@ -5,6 +5,7 @@ from datetime import datetime
 from modelos.cliente import Cliente
 from modelos.sesion import Sesion
 
+from seguridad.normalizador import capitalizar_titulo
 from seguridad.validadores import Validador
 from seguridad.contraseñas import GestorContrasenas
 
@@ -28,6 +29,7 @@ class AutenticacionServicio:
         telefono,
         password
     ):
+        nombre = capitalizar_titulo(nombre)
         Validador.validar_nombre(nombre)
         Validador.validar_rut(rut)
         Validador.validar_correo(correo)

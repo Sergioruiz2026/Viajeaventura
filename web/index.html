@@ -278,6 +278,29 @@
 <script>
 'use strict';
 
+/* ─── Formateadores ortográficos ─────────────────────────────────── */
+const _MIN_ES = new Set([
+  'a','al','ante','con','de','del','desde','durante','e','el','en','entre',
+  'la','las','lo','los','ni','o','para','pero','por','que','se','sin',
+  'sobre','u','un','una','y',
+]);
+
+function fTitulo(texto) {
+  if (!texto) return texto;
+  return texto.trim().split(/\s+/).map((p, i) => {
+    const pl = p.toLowerCase();
+    return (i === 0 || !_MIN_ES.has(pl))
+      ? pl.charAt(0).toUpperCase() + pl.slice(1)
+      : pl;
+  }).join(' ');
+}
+
+function fOracion(texto) {
+  if (!texto) return texto;
+  const t = texto.trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 /* ─── Estado global ──────────────────────────────────────────────── */
 let sesionActual = null;
 
@@ -512,7 +535,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 /* ─── Inicio de vista según rol ──────────────────────────────────── */
 function iniciarVistaPrincipal() {
-  document.getElementById('nombre-usuario').textContent = sesionActual.nombre;
+  document.getElementById('nombre-usuario').textContent = fTitulo(sesionActual.nombre);
   document.getElementById('info-usuario').classList.remove('oculto');
   if (sesionActual.rol === 'ADMIN') {
     mostrarVista('vista-admin');
@@ -548,7 +571,7 @@ function tablaPaquetesCliente(paquetes) {
   const tbody = el('tbody');
   for (const p of paquetes) {
     const tr = el('tr');
-    tr.appendChild(el('td', p.nombre));
+    tr.appendChild(el('td', fTitulo(p.nombre)));
     tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
     tr.appendChild(el('td', p.fecha_salida));
     tr.appendChild(el('td', p.fecha_regreso));
@@ -647,7 +670,7 @@ function tablaReservasCliente(reservas) {
   for (const r of reservas) {
     const tr = el('tr');
     tr.appendChild(el('td', String(r.id)));
-    tr.appendChild(el('td', r.paquete));
+    tr.appendChild(el('td', fTitulo(r.paquete)));
     tr.appendChild(el('td', String(r.cantidad_personas)));
     tr.appendChild(el('td', '$' + r.total.toLocaleString('es-CL')));
     const tdEst = el('td', r.estado);
@@ -691,8 +714,8 @@ async function cargarDestinos() {
     const tbody = el('tbody');
     for (const d of lista) {
       const tr = el('tr');
-      tr.appendChild(el('td', d.nombre));
-      tr.appendChild(el('td', d.zona));
+      tr.appendChild(el('td', fTitulo(d.nombre)));
+      tr.appendChild(el('td', fTitulo(d.zona)));
       tr.appendChild(el('td', d.duracion_dias + ' días'));
       tr.appendChild(el('td', '$' + d.costo_base.toLocaleString('es-CL')));
       const tdEst = el('td', d.disponible ? 'Disponible' : 'No disponible');
@@ -724,7 +747,7 @@ async function cargarPaquetesAdmin() {
     for (const p of lista) {
       const tr = el('tr');
       tr.appendChild(el('td', String(p.id)));
-      tr.appendChild(el('td', p.nombre));
+      tr.appendChild(el('td', fTitulo(p.nombre)));
       tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
       tr.appendChild(el('td', p.fecha_salida));
       tr.appendChild(el('td', p.fecha_regreso));
@@ -758,7 +781,7 @@ async function cargarReservasAdmin() {
     for (const r of lista) {
       const tr = el('tr');
       tr.appendChild(el('td', String(r.id)));
-      tr.appendChild(el('td', r.paquete));
+      tr.appendChild(el('td', fTitulo(r.paquete)));
       tr.appendChild(el('td', String(r.cantidad_personas)));
       tr.appendChild(el('td', '$' + r.total.toLocaleString('es-CL')));
       const tdEst = el('td', r.estado);

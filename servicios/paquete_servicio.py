@@ -6,6 +6,7 @@ from modelos.paquete import Paquete
 from excepciones import ValidacionError
 from seguridad.montos import a_decimal
 from seguridad.autorizacion import exigir_rol
+from seguridad.normalizador import capitalizar_titulo
 
 
 class PaqueteServicio:
@@ -27,6 +28,7 @@ class PaqueteServicio:
         sesion
     ):
         exigir_rol(sesion, "ADMIN")
+        nombre = capitalizar_titulo(nombre)
         if ids_destinos is not None:
             if nombres_destinos is not None:
                 raise ValidacionError(

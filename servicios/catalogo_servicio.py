@@ -4,6 +4,7 @@
 from modelos.destino import Destino
 from excepciones import ValidacionError
 from seguridad.autorizacion import exigir_rol
+from seguridad.normalizador import capitalizar_oracion, capitalizar_titulo
 
 
 class CatalogoServicio:
@@ -24,9 +25,9 @@ class CatalogoServicio:
         exigir_rol(sesion, "ADMIN")
 
         destino = Destino(
-            nombre,
-            zona,
-            descripcion,
+            capitalizar_titulo(nombre),
+            capitalizar_titulo(zona),
+            capitalizar_oracion(descripcion),
             duracion_dias,
             costo_base
         )
