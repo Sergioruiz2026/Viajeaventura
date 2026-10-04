@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viajes Aventura</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+    header {
+      background: #1a56db; color: #fff;
+      padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 1.2rem; letter-spacing: .5px; }
+    #info-usuario { display: flex; align-items: center; gap: 12px; font-size: .9rem; }
+
+    main { max-width: 980px; margin: 28px auto; padding: 0 16px; }
+
+    .card {
+      background: #fff; border-radius: 10px;
+      padding: 22px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.09);
+      margin-bottom: 22px;
+    }
+
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: .875rem; transition: opacity .15s;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { opacity: .85; }
+    .btn-primary   { background: #1a56db; color: #fff; }
+    .btn-danger    { background: #e53e3e; color: #fff; }
+    .btn-success   { background: #276749; color: #fff; }
+    .btn-secondary { background: #718096; color: #fff; }
+    .btn-outline   { background: transparent; border: 1px solid #fff; color: #fff; padding: 6px 14px; }
+    .btn-sm        { padding: 4px 10px; font-size: .8rem; }
+
+    .tabs { display: flex; gap: 2px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 18px; border: none; background: none;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; font-size: .875rem; color: #718096;
+    }
+    .tab.activa { border-bottom-color: #1a56db; color: #1a56db; font-weight: 600; }
+
+    form { display: flex; flex-direction: column; gap: 11px; }
+    .campo { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: .82rem; font-weight: 600; color: #4a5568; }
+    input, select { padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: .875rem; width: 100%; }
+    input:focus, select:focus { outline: none; border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+
+    .alerta { padding: 9px 13px; border-radius: 6px; font-size: .85rem; margin-top: 10px; }
+    .alerta-error  { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+    .alerta-exito  { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+    .oculto { display: none !important; }
+
+    .seccion-titulo { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 14px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th { text-align: left; padding: 9px 11px; background: #f7fafc; color: #4a5568; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 9px 11px; border-bottom: 1px solid #edf2f7; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f7fafc; }
+
+    .estado-activa  { color: #276749; font-weight: 600; }
+    .estado-cancelada { color: #9b2c2c; }
+    .estado-vigente { color: #276749; }
+    .estado-vencido { color: #9b2c2c; }
+
+    .fila-reservar td { background: #ebf8ff; padding: 12px 11px; }
+    .inline-reservar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .inline-reservar input { width: 72px; }
+
+    .nav-admin { display: flex; gap: 4px; margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Viajes Aventura</h1>
+  <div id="info-usuario" class="oculto">
+    <span id="nombre-usuario"></span>
+    <button class="btn btn-outline" id="btn-salir">Salir</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ═══════════════════ VISTA: AUTENTICACIÓN ═══════════════════ -->
+  <div id="vista-auth">
+    <div class="card" style="max-width:420px;margin:0 auto">
+      <div class="tabs" id="tabs-auth">
+        <button class="tab activa" data-tab="login">Iniciar sesión</button>
+        <button class="tab"        data-tab="registro">Registrarse</button>
+      </div>
+
+      <div id="panel-login">
+        <form id="form-login">
+          <div class="campo">
+            <label for="login-usuario">Usuario o correo</label>
+            <input id="login-usuario" type="text" autocomplete="username" required>
+          </div>
+          <div class="campo">
+            <label for="login-password">Contraseña</label>
+            <input id="login-password" type="password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Entrar</button>
+        </form>
+        <div id="error-login" class="alerta alerta-error oculto"></div>
+      </div>
+
+      <div id="panel-registro" class="oculto">
+        <form id="form-registro">
+          <div class="campo">
+            <label for="reg-nombre">Nombre completo</label>
+            <input id="reg-nombre" type="text" required>
+          </div>
+          <div class="campo">
+            <label for="reg-rut">RUT (ej: 12.345.678-9)</label>
+            <input id="reg-rut" type="text" required>
+          </div>
+          <div class="campo">
+            <label for="reg-email">Correo electrónico</label>
+            <input id="reg-email" type="email" autocomplete="email" required>
+          </div>
+          <div class="campo">
+            <label for="reg-telefono">Teléfono (ej: +56912345678)</label>
+            <input id="reg-telefono" type="text" required>
+          </div>
+          <div class="campo">
+            <label for="reg-password">Contraseña</label>
+            <input id="reg-password" type="password" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Registrarse</button>
+        </form>
+        <div id="error-registro" class="alerta alerta-error oculto"></div>
+        <div id="exito-registro" class="alerta alerta-exito oculto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ VISTA: CLIENTE ═══════════════════ -->
+  <div id="vista-cliente" class="oculto">
+    <div class="card">
+      <p class="seccion-titulo">Paquetes disponibles</p>
+      <div id="cont-paquetes-cliente"></div>
+    </div>
+    <div class="card">
+      <p class="seccion-titulo">Mis reservas</p>
+      <div id="cont-reservas-cliente"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ VISTA: ADMIN ═══════════════════ -->
+  <div id="vista-admin" class="oculto">
+    <div class="card" style="padding-bottom:0">
+      <div class="nav-admin tabs" id="tabs-admin">
+        <button class="tab activa" data-panel="destinos">Destinos</button>
+        <button class="tab"        data-panel="paquetes">Paquetes</button>
+        <button class="tab"        data-panel="reservas">Reservas</button>
+      </div>
+    </div>
+
+    <!-- Panel destinos -->
+    <div id="panel-destinos">
+      <div class="card">
+        <p class="seccion-titulo">Destinos registrados</p>
+        <div id="tabla-destinos"></div>
+      </div>
+      <div class="card">
+        <p class="seccion-titulo">Registrar destino</p>
+        <form id="form-destino">
+          <div class="campo"><label for="d-nombre">Nombre</label><input id="d-nombre" required></div>
+          <div class="campo"><label for="d-zona">Zona / Región</label><input id="d-zona" required></div>
+          <div class="campo"><label for="d-descripcion">Descripción</label><input id="d-descripcion" required></div>
+          <div class="campo"><label for="d-duracion">Duración (días)</label><input id="d-duracion" type="number" min="1" required></div>
+          <div class="campo"><label for="d-costo">Costo base (CLP)</label><input id="d-costo" type="number" min="1" required></div>
+          <button type="submit" class="btn btn-primary">Registrar destino</button>
+        </form>
+        <div id="error-destino" class="alerta alerta-error oculto"></div>
+        <div id="exito-destino" class="alerta alerta-exito oculto"></div>
+      </div>
+    </div>
+
+    <!-- Panel paquetes -->
+    <div id="panel-paquetes" class="oculto">
+      <div class="card">
+        <p class="seccion-titulo">Paquetes</p>
+        <div id="tabla-paquetes-admin"></div>
+      </div>
+      <div class="card">
+        <p class="seccion-titulo">Crear paquete</p>
+        <form id="form-paquete">
+          <div class="campo"><label for="p-nombre">Nombre del paquete</label><input id="p-nombre" required></div>
+          <div class="campo">
+            <label for="p-destinos">Destinos (separados por coma, entre 2 y 5)</label>
+            <input id="p-destinos" placeholder="Valle del Elqui, Cajón del Maipo" required>
+          </div>
+          <div class="campo"><label for="p-salida">Fecha de salida</label><input id="p-salida" type="date" required></div>
+          <div class="campo"><label for="p-regreso">Fecha de regreso</label><input id="p-regreso" type="date" required></div>
+          <div class="campo"><label for="p-cupo">Cupo máximo</label><input id="p-cupo" type="number" min="1" required></div>
+          <div class="campo"><label for="p-margen">Margen de operación % (vacío = 20 %)</label><input id="p-margen" type="number" min="0" max="200" placeholder="20"></div>
+          <button type="submit" class="btn btn-primary">Crear paquete</button>
+        </form>
+        <div id="error-paquete" class="alerta alerta-error oculto"></div>
+        <div id="exito-paquete" class="alerta alerta-exito oculto"></div>
+      </div>
+    </div>
+
+    <!-- Panel reservas -->
+    <div id="panel-reservas" class="oculto">
+      <div class="card">
+        <p class="seccion-titulo">Todas las reservas</p>
+        <div id="tabla-reservas-admin"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+/* ─── Estado global ──────────────────────────────────────────────── */
+let sesionActual = null; // { nombre, rol }
+
+/* ─── Helper: llamadas a la API ──────────────────────────────────── */
+async function api(metodo, ruta, cuerpo) {
+  const opts = {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+  };
+  if (cuerpo !== undefined) opts.body = JSON.stringify(cuerpo);
+  const r = await fetch(ruta, opts);
+  let json = null;
+  try { json = await r.json(); } catch { /* vacío */ }
+  if (!r.ok) {
+    const msg = json?.detail;
+    throw new Error(typeof msg === 'string' ? msg : 'Error inesperado.');
+  }
+  return json;
+}
+
+/* ─── Helper: crear elementos DOM sin innerHTML ──────────────────── */
+function el(tag, texto, attrs) {
+  const e = document.createElement(tag);
+  if (texto != null) e.textContent = texto;
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'cls') e.className = v;
+      else if (k === 'id') e.id = v;
+      else if (k === 'style') e.style.cssText = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v);
+    }
+  }
+  return e;
+}
+
+/* ─── Alertas ────────────────────────────────────────────────────── */
+function mostrarAlerta(idEl, texto, tipo) {
+  const e = document.getElementById(idEl);
+  e.textContent = texto;
+  e.className = 'alerta ' + (tipo === 'error' ? 'alerta-error' : 'alerta-exito');
+  e.classList.remove('oculto');
+}
+function ocultarAlerta(idEl) {
+  const e = document.getElementById(idEl);
+  e.textContent = '';
+  e.classList.add('oculto');
+}
+
+/* ─── Navegación de vistas ───────────────────────────────────────── */
+function mostrarVista(id) {
+  for (const v of document.querySelectorAll('main > div')) v.classList.add('oculto');
+  document.getElementById(id).classList.remove('oculto');
+}
+
+/* ─── Inicio ─────────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', async () => {
+
+  // Tabs de autenticación
+  document.getElementById('tabs-auth').addEventListener('click', ev => {
+    const tab = ev.target.closest('[data-tab]');
+    if (!tab) return;
+    document.querySelectorAll('#tabs-auth .tab').forEach(t => t.classList.remove('activa'));
+    tab.classList.add('activa');
+    document.getElementById('panel-login').classList.add('oculto');
+    document.getElementById('panel-registro').classList.add('oculto');
+    document.getElementById('panel-' + tab.dataset.tab).classList.remove('oculto');
+  });
+
+  // Tabs de admin
+  document.getElementById('tabs-admin').addEventListener('click', ev => {
+    const tab = ev.target.closest('[data-panel]');
+    if (!tab) return;
+    document.querySelectorAll('#tabs-admin .tab').forEach(t => t.classList.remove('activa'));
+    tab.classList.add('activa');
+    for (const p of ['destinos', 'paquetes', 'reservas'])
+      document.getElementById('panel-' + p).classList.add('oculto');
+    const panel = tab.dataset.panel;
+    document.getElementById('panel-' + panel).classList.remove('oculto');
+    if (panel === 'destinos') cargarDestinos();
+    else if (panel === 'paquetes') cargarPaquetesAdmin();
+    else cargarReservasAdmin();
+  });
+
+  // Login
+  document.getElementById('form-login').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    ocultarAlerta('error-login');
+    try {
+      sesionActual = await api('POST', '/api/login', {
+        usuario: document.getElementById('login-usuario').value.trim(),
+        password: document.getElementById('login-password').value,
+      });
+      iniciarVistaPrincipal();
+    } catch (e) { mostrarAlerta('error-login', e.message, 'error'); }
+  });
+
+  // Registro
+  document.getElementById('form-registro').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    ocultarAlerta('error-registro');
+    ocultarAlerta('exito-registro');
+    try {
+      await api('POST', '/clientes/registro', {
+        nombre:   document.getElementById('reg-nombre').value.trim(),
+        rut:      document.getElementById('reg-rut').value.trim(),
+        email:    document.getElementById('reg-email').value.trim(),
+        telefono: document.getElementById('reg-telefono').value.trim(),
+        password: document.getElementById('reg-password').value,
+      });
+      document.getElementById('form-registro').reset();
+      mostrarAlerta('exito-registro', 'Registro exitoso. Ahora puedes iniciar sesión.', 'exito');
+    } catch (e) { mostrarAlerta('error-registro', e.message, 'error'); }
+  });
+
+  // Salir
+  document.getElementById('btn-salir').addEventListener('click', async () => {
+    try { await api('POST', '/api/logout'); } catch { /* ignorar */ }
+    sesionActual = null;
+    document.getElementById('info-usuario').classList.add('oculto');
+    mostrarVista('vista-auth');
+  });
+
+  // Formulario de destino
+  document.getElementById('form-destino').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    ocultarAlerta('error-destino');
+    ocultarAlerta('exito-destino');
+    try {
+      const r = await api('POST', '/api/destinos', {
+        nombre:       document.getElementById('d-nombre').value.trim(),
+        zona:         document.getElementById('d-zona').value.trim(),
+        descripcion:  document.getElementById('d-descripcion').value.trim(),
+        duracion_dias: parseInt(document.getElementById('d-duracion').value, 10),
+        costo_base:   parseInt(document.getElementById('d-costo').value, 10),
+      });
+      document.getElementById('form-destino').reset();
+      mostrarAlerta('exito-destino', 'Destino "' + r.nombre + '" registrado.', 'exito');
+      cargarDestinos();
+    } catch (e) { mostrarAlerta('error-destino', e.message, 'error'); }
+  });
+
+  // Formulario de paquete
+  document.getElementById('form-paquete').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    ocultarAlerta('error-paquete');
+    ocultarAlerta('exito-paquete');
+    const margenVal = document.getElementById('p-margen').value.trim();
+    try {
+      const r = await api('POST', '/api/paquetes', {
+        nombre:            document.getElementById('p-nombre').value.trim(),
+        destinos:          document.getElementById('p-destinos').value.split(',').map(s => s.trim()).filter(Boolean),
+        fecha_salida:      document.getElementById('p-salida').value,
+        fecha_regreso:     document.getElementById('p-regreso').value,
+        cupo_maximo:       parseInt(document.getElementById('p-cupo').value, 10),
+        margen_operacion:  margenVal ? parseFloat(margenVal) / 100 : 0.20,
+      });
+      document.getElementById('form-paquete').reset();
+      mostrarAlerta('exito-paquete',
+        'Paquete "' + r.nombre + '" creado — $' + r.precio_por_persona.toLocaleString('es-CL') + ' p/p.',
+        'exito');
+      cargarPaquetesAdmin();
+    } catch (e) { mostrarAlerta('error-paquete', e.message, 'error'); }
+  });
+
+  // Verificar sesión activa al cargar
+  try {
+    const r = await fetch('/api/yo');
+    if (r.ok) { sesionActual = await r.json(); iniciarVistaPrincipal(); return; }
+  } catch { /* nada */ }
+  mostrarVista('vista-auth');
+});
+
+/* ─── Inicio de vista según rol ──────────────────────────────────── */
+function iniciarVistaPrincipal() {
+  document.getElementById('nombre-usuario').textContent = sesionActual.nombre;
+  document.getElementById('info-usuario').classList.remove('oculto');
+  if (sesionActual.rol === 'ADMIN') {
+    mostrarVista('vista-admin');
+    cargarDestinos();
+  } else {
+    mostrarVista('vista-cliente');
+    cargarPaquetesCliente();
+    cargarReservasCliente();
+  }
+}
+
+/* ─── VISTA CLIENTE: paquetes ────────────────────────────────────── */
+async function cargarPaquetesCliente() {
+  const cont = document.getElementById('cont-paquetes-cliente');
+  cont.textContent = 'Cargando…';
+  try {
+    const lista = await api('GET', '/api/paquetes');
+    cont.textContent = '';
+    if (!lista.length) { cont.textContent = 'No hay paquetes disponibles.'; return; }
+    cont.appendChild(tablaPaquetesCliente(lista));
+  } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+
+function tablaPaquetesCliente(paquetes) {
+  const tabla = el('table');
+  const thead = el('thead');
+  const trh   = el('tr');
+  for (const col of ['Nombre', 'Precio p/p', 'Salida', 'Regreso', 'Cupos', ''])
+    trh.appendChild(el('th', col));
+  thead.appendChild(trh);
+  tabla.appendChild(thead);
+
+  const tbody = el('tbody');
+  for (const p of paquetes) {
+    const tr = el('tr');
+    tr.appendChild(el('td', p.nombre));
+    tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
+    tr.appendChild(el('td', p.fecha_salida));
+    tr.appendChild(el('td', p.fecha_regreso));
+    tr.appendChild(el('td', String(p.cupo_disponible)));
+    const tdAcc = el('td');
+    if (p.cupo_disponible > 0) {
+      const btn = el('button', 'Reservar', { cls: 'btn btn-sm btn-success' });
+      btn.addEventListener('click', () => toggleFormReserva(p, tr, tbody));
+      tdAcc.appendChild(btn);
+    } else {
+      tdAcc.textContent = 'Sin cupos';
+    }
+    tr.appendChild(tdAcc);
+    tbody.appendChild(tr);
+  }
+  tabla.appendChild(tbody);
+  return tabla;
+}
+
+function toggleFormReserva(paquete, trPaquete, tbody) {
+  const ant = tbody.querySelector('.fila-reservar');
+  if (ant) {
+    const esElMismo = ant.dataset.pid === String(paquete.id);
+    ant.remove();
+    if (esElMismo) return;
+  }
+
+  const trF  = el('tr', null, { cls: 'fila-reservar' });
+  trF.dataset.pid = String(paquete.id);
+  const td   = el('td', null, { colspan: '6' });
+  const div  = el('div', null, { cls: 'inline-reservar' });
+
+  div.appendChild(el('label', 'Personas:'));
+  const inp = el('input', null, { type: 'number', min: '1', max: String(paquete.cupo_disponible) });
+  inp.value = '1';
+  div.appendChild(inp);
+
+  const btnOk  = el('button', 'Confirmar', { cls: 'btn btn-sm btn-primary' });
+  const btnNo  = el('button', 'Cancelar',  { cls: 'btn btn-sm btn-secondary' });
+  const spanErr = el('span');
+  spanErr.className = 'alerta alerta-error oculto';
+  spanErr.style.marginLeft = '6px';
+
+  btnNo.addEventListener('click', () => trF.remove());
+  btnOk.addEventListener('click', async () => {
+    const personas = parseInt(inp.value, 10);
+    if (!personas || personas < 1) {
+      spanErr.textContent = 'Ingrese un número válido.';
+      spanErr.classList.remove('oculto');
+      return;
+    }
+    btnOk.disabled = true;
+    try {
+      await api('POST', '/api/reservas', { paquete_id: paquete.id, cantidad_personas: personas });
+      trF.remove();
+      cargarPaquetesCliente();
+      cargarReservasCliente();
+    } catch (e) {
+      spanErr.textContent = e.message;
+      spanErr.classList.remove('oculto');
+      btnOk.disabled = false;
+    }
+  });
+
+  div.appendChild(btnOk);
+  div.appendChild(btnNo);
+  div.appendChild(spanErr);
+  td.appendChild(div);
+  trF.appendChild(td);
+  trPaquete.after(trF);
+  inp.focus();
+}
+
+/* ─── VISTA CLIENTE: mis reservas ───────────────────────────────── */
+async function cargarReservasCliente() {
+  const cont = document.getElementById('cont-reservas-cliente');
+  cont.textContent = 'Cargando…';
+  try {
+    const lista = await api('GET', '/api/reservas');
+    cont.textContent = '';
+    if (!lista.length) { cont.textContent = 'No tiene reservas.'; return; }
+    cont.appendChild(tablaReservasCliente(lista));
+  } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+
+function tablaReservasCliente(reservas) {
+  const tabla = el('table');
+  const thead = el('thead');
+  const trh   = el('tr');
+  for (const col of ['#', 'Paquete', 'Personas', 'Total', 'Estado', ''])
+    trh.appendChild(el('th', col));
+  thead.appendChild(trh);
+  tabla.appendChild(thead);
+
+  const tbody = el('tbody');
+  for (const r of reservas) {
+    const tr = el('tr');
+    tr.appendChild(el('td', String(r.id)));
+    tr.appendChild(el('td', r.paquete));
+    tr.appendChild(el('td', String(r.cantidad_personas)));
+    tr.appendChild(el('td', '$' + r.total.toLocaleString('es-CL')));
+    const tdEst = el('td', r.estado);
+    tdEst.className = r.estado === 'ACTIVA' ? 'estado-activa' : 'estado-cancelada';
+    tr.appendChild(tdEst);
+    const tdAcc = el('td');
+    if (r.estado === 'ACTIVA') {
+      const btn = el('button', 'Cancelar', { cls: 'btn btn-sm btn-danger' });
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Cancelar la reserva #' + r.id + '?')) return;
+        try {
+          await api('POST', '/api/reservas/' + r.id + '/cancelar');
+          cargarReservasCliente();
+          cargarPaquetesCliente();
+        } catch (e) { alert('Error: ' + e.message); }
+      });
+      tdAcc.appendChild(btn);
+    }
+    tr.appendChild(tdAcc);
+    tbody.appendChild(tr);
+  }
+  tabla.appendChild(tbody);
+  return tabla;
+}
+
+/* ─── VISTA ADMIN: destinos ─────────────────────────────────────── */
+async function cargarDestinos() {
+  const cont = document.getElementById('tabla-destinos');
+  cont.textContent = 'Cargando…';
+  try {
+    const lista = await api('GET', '/api/destinos');
+    cont.textContent = '';
+    if (!lista.length) { cont.textContent = 'No hay destinos.'; return; }
+    const tabla = el('table');
+    const thead = el('thead');
+    const trh   = el('tr');
+    for (const col of ['Nombre', 'Zona', 'Días', 'Costo base', 'Estado'])
+      trh.appendChild(el('th', col));
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+    const tbody = el('tbody');
+    for (const d of lista) {
+      const tr = el('tr');
+      tr.appendChild(el('td', d.nombre));
+      tr.appendChild(el('td', d.zona));
+      tr.appendChild(el('td', d.duracion_dias + ' días'));
+      tr.appendChild(el('td', '$' + d.costo_base.toLocaleString('es-CL')));
+      const tdEst = el('td', d.disponible ? 'Disponible' : 'No disponible');
+      tdEst.className = d.disponible ? 'estado-vigente' : 'estado-cancelada';
+      tr.appendChild(tdEst);
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    cont.appendChild(tabla);
+  } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+
+/* ─── VISTA ADMIN: paquetes ─────────────────────────────────────── */
+async function cargarPaquetesAdmin() {
+  const cont = document.getElementById('tabla-paquetes-admin');
+  cont.textContent = 'Cargando…';
+  try {
+    const lista = await api('GET', '/api/paquetes');
+    cont.textContent = '';
+    if (!lista.length) { cont.textContent = 'No hay paquetes.'; return; }
+    const tabla = el('table');
+    const thead = el('thead');
+    const trh   = el('tr');
+    for (const col of ['#', 'Nombre', 'Precio p/p', 'Salida', 'Regreso', 'Cupos libres', 'Estado'])
+      trh.appendChild(el('th', col));
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+    const tbody = el('tbody');
+    for (const p of lista) {
+      const tr = el('tr');
+      tr.appendChild(el('td', String(p.id)));
+      tr.appendChild(el('td', p.nombre));
+      tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
+      tr.appendChild(el('td', p.fecha_salida));
+      tr.appendChild(el('td', p.fecha_regreso));
+      tr.appendChild(el('td', String(p.cupo_disponible)));
+      const tdEst = el('td', p.estado);
+      tdEst.className = p.estado === 'Vigente' ? 'estado-vigente' : 'estado-vencido';
+      tr.appendChild(tdEst);
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    cont.appendChild(tabla);
+  } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+
+/* ─── VISTA ADMIN: reservas ─────────────────────────────────────── */
+async function cargarReservasAdmin() {
+  const cont = document.getElementById('tabla-reservas-admin');
+  cont.textContent = 'Cargando…';
+  try {
+    const lista = await api('GET', '/api/reservas');
+    cont.textContent = '';
+    if (!lista.length) { cont.textContent = 'No hay reservas.'; return; }
+    const tabla = el('table');
+    const thead = el('thead');
+    const trh   = el('tr');
+    for (const col of ['#', 'Paquete', 'Personas', 'Total', 'Estado', 'Emisión'])
+      trh.appendChild(el('th', col));
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+    const tbody = el('tbody');
+    for (const r of lista) {
+      const tr = el('tr');
+      tr.appendChild(el('td', String(r.id)));
+      tr.appendChild(el('td', r.paquete));
+      tr.appendChild(el('td', String(r.cantidad_personas)));
+      tr.appendChild(el('td', '$' + r.total.toLocaleString('es-CL')));
+      const tdEst = el('td', r.estado);
+      tdEst.className = r.estado === 'ACTIVA' ? 'estado-activa' : 'estado-cancelada';
+      tr.appendChild(tdEst);
+      tr.appendChild(el('td', r.fecha_emision.slice(0, 10)));
+      tbody.appendChild(tr);
+    }
+    tabla.appendChild(tbody);
+    cont.appendChild(tabla);
+  } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+</script>
+</body>
+</html>

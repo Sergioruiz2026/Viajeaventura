@@ -1,17 +1,45 @@
-"""API HTTP para el registro de clientes."""
+"""API HTTP para el registro de clientes y gestión web."""
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+import os
+import secrets
+from datetime import date
+from decimal import Decimal
+
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from excepciones import CorreoDuplicadoError, ValidacionError
+from excepciones import (
+    AutenticacionError,
+    AutorizacionError,
+    CorreoDuplicadoError,
+    CupoInsuficienteError,
+    DestinoDuplicadoError,
+    PaqueteDuplicadoError,
+    ReservaNoPermitidaError,
+    SesionExpiradaError,
+    ValidacionError,
+    ViajesAventuraError,
+)
+from modelos.sesion import Sesion
 from repositorios.base_datos import BaseDatos
 from repositorios.cliente_repositorio import ClienteRepositorio
+from repositorios.destino_repositorio import DestinoRepositorio
+from repositorios.paquete_repositorio import PaqueteRepositorio
+from repositorios.reserva_repositorio import ReservaRepositorio
 from seguridad.logging_config import enmascarar_texto
 from servicios.autenticacion_servicio import AutenticacionServicio
+from servicios.catalogo_servicio import CatalogoServicio
+from servicios.paquete_servicio import PaqueteServicio
+from servicios.reserva_servicio import ReservaServicio
 
+
+# ---------------------------------------------------------------------------
+# Modelos de request
+# ---------------------------------------------------------------------------
 
 class RegistroClienteRequest(BaseModel):
     nombre: str
@@ -21,32 +49,129 @@ class RegistroClienteRequest(BaseModel):
     password: str
 
 
+class LoginRequest(BaseModel):
+    usuario: str
+    password: str
+
+
+class DestinoRequest(BaseModel):
+    nombre: str
+    zona: str
+    descripcion: str
+    duracion_dias: int
+    costo_base: Decimal
+
+
+class PaqueteRequest(BaseModel):
+    nombre: str
+    destinos: list[str]
+    fecha_salida: date
+    fecha_regreso: date
+    cupo_maximo: int
+    margen_operacion: Decimal = Decimal("0.20")
+
+
+class ReservaRequest(BaseModel):
+    paquete_id: int
+    cantidad_personas: int
+
+
+# ---------------------------------------------------------------------------
+# Almacén de sesiones en memoria
+# ---------------------------------------------------------------------------
+
+_sesiones: dict[str, Sesion] = {}
+
+
+# ---------------------------------------------------------------------------
+# Utilidades
+# ---------------------------------------------------------------------------
+
 def _sanitizar_detalle(detalle):
     if isinstance(detalle, str):
         return enmascarar_texto(detalle)
     if isinstance(detalle, list):
-        return [_sanitizar_detalle(elemento) for elemento in detalle]
+        return [_sanitizar_detalle(e) for e in detalle]
     if isinstance(detalle, dict):
-        return {
-            clave: _sanitizar_detalle(valor)
-            for clave, valor in detalle.items()
-        }
+        return {k: _sanitizar_detalle(v) for k, v in detalle.items()}
     return detalle
 
 
-def _servicio_autenticacion():
-    base_datos = BaseDatos()
-    try:
-        yield AutenticacionServicio(ClienteRepositorio(base_datos))
-    finally:
-        base_datos.cerrar()
+def _exc_a_http(error: ViajesAventuraError) -> HTTPException:
+    if isinstance(error, SesionExpiradaError):
+        return HTTPException(status_code=401, detail="Sesión expirada. Inicia sesión nuevamente.")
+    if isinstance(error, AutenticacionError):
+        return HTTPException(status_code=401, detail=str(error))
+    if isinstance(error, AutorizacionError):
+        return HTTPException(status_code=403, detail=str(error))
+    if isinstance(error, (CorreoDuplicadoError, DestinoDuplicadoError, PaqueteDuplicadoError)):
+        return HTTPException(status_code=409, detail=str(error))
+    if isinstance(error, (CupoInsuficienteError, ReservaNoPermitidaError)):
+        return HTTPException(status_code=409, detail=str(error))
+    if isinstance(error, ValidacionError):
+        return HTTPException(status_code=422, detail=str(error))
+    return HTTPException(status_code=400, detail=str(error))
 
+
+# ---------------------------------------------------------------------------
+# Dependencias
+# ---------------------------------------------------------------------------
+
+class _Servicios:
+    def __init__(self, base_datos: BaseDatos):
+        destino_repo = DestinoRepositorio(base_datos)
+        paquete_repo = PaqueteRepositorio(base_datos)
+        cliente_repo = ClienteRepositorio(base_datos)
+        reserva_repo = ReservaRepositorio(base_datos)
+        self.autenticacion = AutenticacionServicio(cliente_repo)
+        self.catalogo = CatalogoServicio(destino_repo)
+        self.paquetes = PaqueteServicio(paquete_repo, destino_repo)
+        self.reservas = ReservaServicio(reserva_repo, paquete_repo)
+
+
+def _servicios_dep():
+    bd = BaseDatos()
+    try:
+        yield _Servicios(bd)
+    finally:
+        bd.cerrar()
+
+
+def _obtener_sesion(session: str | None = Cookie(default=None)) -> Sesion:
+    if not session or session not in _sesiones:
+        raise HTTPException(status_code=401, detail="No autenticado.")
+    try:
+        _sesiones[session].renovar()
+    except SesionExpiradaError:
+        _sesiones.pop(session, None)
+        raise HTTPException(status_code=401, detail="Sesión expirada.")
+    return _sesiones[session]
+
+
+def _verificar_csrf(request: Request) -> None:
+    if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+        raise HTTPException(status_code=403, detail="Cabecera CSRF requerida.")
+
+
+# ---------------------------------------------------------------------------
+# Factory de la aplicación
+# ---------------------------------------------------------------------------
 
 def crear_app(servicio=None):
     app = FastAPI()
-    dependencia_servicio = _servicio_autenticacion
+
     if servicio is not None:
-        dependencia_servicio = lambda: servicio
+        def _dep_registro():
+            yield servicio
+    else:
+        def _dep_registro():
+            bd = BaseDatos()
+            try:
+                yield AutenticacionServicio(ClienteRepositorio(bd))
+            finally:
+                bd.cerrar()
+
+    # --- manejadores de error globales ---------------------------------- #
 
     @app.exception_handler(RequestValidationError)
     async def solicitud_invalida(request: Request, error: RequestValidationError):
@@ -59,36 +184,214 @@ def crear_app(servicio=None):
     async def error_http(request: Request, error: HTTPException):
         return JSONResponse(
             status_code=error.status_code,
-            content={"detail": jsonable_encoder(
-                _sanitizar_detalle(error.detail)
-            )},
-            headers=error.headers
+            content={"detail": jsonable_encoder(_sanitizar_detalle(error.detail))},
+            headers=error.headers,
         )
+
+    # --- endpoint legado ------------------------------------------------ #
 
     @app.post("/clientes/registro", status_code=status.HTTP_201_CREATED)
     def registrar_cliente(
         datos: RegistroClienteRequest,
-        autenticacion=Depends(dependencia_servicio)
+        autenticacion=Depends(_dep_registro),
     ):
         try:
             autenticacion.registrar_cliente(
-                datos.nombre,
-                datos.rut,
-                datos.email,
-                datos.telefono,
-                datos.password
+                datos.nombre, datos.rut, datos.email,
+                datos.telefono, datos.password,
             )
-        except CorreoDuplicadoError as error:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=str(error)
-            ) from error
-        except ValidacionError as error:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(error)
-            ) from error
+        except CorreoDuplicadoError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
+        except ValidacionError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
         return {"mensaje": "Cliente registrado correctamente."}
+
+    # --- autenticación web ---------------------------------------------- #
+
+    @app.post("/api/login")
+    def login(
+        datos: LoginRequest,
+        response: Response,
+        _: None = Depends(_verificar_csrf),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            sesion = svcs.autenticacion.iniciar_sesion(datos.usuario, datos.password)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        token = secrets.token_hex(32)
+        _sesiones[token] = sesion
+        response.set_cookie(
+            key="session",
+            value=token,
+            httponly=True,
+            samesite="strict",
+            max_age=1800,
+        )
+        return {"nombre": sesion.nombre, "rol": sesion.rol}
+
+    @app.post("/api/logout")
+    def logout(
+        response: Response,
+        _: None = Depends(_verificar_csrf),
+        session: str | None = Cookie(default=None),
+    ):
+        if session:
+            _sesiones.pop(session, None)
+        response.delete_cookie("session")
+        return {"mensaje": "Sesión cerrada."}
+
+    @app.get("/api/yo")
+    def yo(sesion: Sesion = Depends(_obtener_sesion)):
+        return {"nombre": sesion.nombre, "rol": sesion.rol}
+
+    # --- destinos -------------------------------------------------------- #
+
+    @app.get("/api/destinos")
+    def listar_destinos(
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            lista = svcs.catalogo.listar_destinos(sesion=sesion)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return [
+            {
+                "nombre": d.nombre,
+                "zona": d.zona,
+                "descripcion": d.descripcion,
+                "duracion_dias": d.duracion_dias,
+                "costo_base": int(d.costo_base),
+                "disponible": d.disponible,
+            }
+            for d in lista
+        ]
+
+    @app.post("/api/destinos", status_code=201)
+    def crear_destino(
+        datos: DestinoRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            d = svcs.catalogo.registrar_destino(
+                datos.nombre, datos.zona, datos.descripcion,
+                datos.duracion_dias, datos.costo_base,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"nombre": d.nombre, "zona": d.zona}
+
+    # --- paquetes -------------------------------------------------------- #
+
+    @app.get("/api/paquetes")
+    def listar_paquetes(
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            if sesion.rol == "ADMIN":
+                lista = svcs.paquetes.listar_paquetes(sesion=sesion)
+            else:
+                lista = svcs.paquetes.listar_vigentes(sesion=sesion)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return [
+            {
+                "id": p.id,
+                "nombre": p.nombre,
+                "precio_por_persona": int(p.precio_por_persona),
+                "fecha_salida": p.fecha_salida.isoformat(),
+                "fecha_regreso": p.fecha_regreso.isoformat(),
+                "cupo_disponible": p.cupo_disponible,
+                "estado": p.estado,
+            }
+            for p in lista
+        ]
+
+    @app.post("/api/paquetes", status_code=201)
+    def crear_paquete(
+        datos: PaqueteRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            p = svcs.paquetes.crear_paquete(
+                datos.nombre,
+                datos.destinos,
+                datos.fecha_salida,
+                datos.fecha_regreso,
+                datos.cupo_maximo,
+                margen_operacion=datos.margen_operacion,
+                sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"nombre": p.nombre, "precio_por_persona": int(p.precio_por_persona)}
+
+    # --- reservas -------------------------------------------------------- #
+
+    @app.get("/api/reservas")
+    def listar_reservas(
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            if sesion.rol == "ADMIN":
+                lista = svcs.reservas.listar_reservas(sesion=sesion)
+            else:
+                lista = svcs.reservas.reservas_cliente(sesion)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return [
+            {
+                "id": r.id,
+                "paquete": r.paquete.nombre,
+                "cantidad_personas": r.cantidad_personas,
+                "total": int(r.total),
+                "estado": r.estado,
+                "fecha_emision": r.fecha_emision.isoformat(),
+            }
+            for r in lista
+        ]
+
+    @app.post("/api/reservas", status_code=201)
+    def crear_reserva(
+        datos: ReservaRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            r = svcs.reservas.crear_reserva(
+                sesion, datos.paquete_id, datos.cantidad_personas
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"id": r.id, "total": int(r.total)}
+
+    @app.post("/api/reservas/{reserva_id}/cancelar")
+    def cancelar_reserva(
+        reserva_id: int,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            svcs.reservas.cancelar_reserva(sesion, reserva_id)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"mensaje": "Reserva cancelada."}
+
+    # --- archivos estáticos --------------------------------------------- #
+
+    _web_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+    if os.path.isdir(_web_dir):
+        app.mount("/", StaticFiles(directory=_web_dir, html=True), name="web")
 
     return app
 

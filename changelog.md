@@ -47,3 +47,30 @@ Se agregó la sección **Usuarios registrados en app.db** al final de `README.md
 **Prompt:** _"Regista los prompt realizados a changelog.md"_
 
 Creación de este archivo `CHANGELOG.md` con el historial de prompts y cambios de la sesión.
+
+---
+
+### Interfaz web + extensión de API REST
+**Prompt:** _"Lee solo api.py, servicios/ y modelos/sesion.py [...] Tarea: agregar una interfaz web al proyecto, reutilizando los servicios actuales sin cambiar su lógica."_
+
+Archivos creados/modificados:
+- **`api.py`** — Extendido con 9 endpoints bajo `/api`:
+  - `POST /api/login` — autentica, emite cookie HttpOnly SameSite=Strict, guarda sesión en memoria.
+  - `POST /api/logout` — invalida token y borra cookie.
+  - `GET  /api/yo` — devuelve nombre y rol de la sesión activa.
+  - `GET  /api/destinos` / `POST /api/destinos` — listado y creación (solo ADMIN).
+  - `GET  /api/paquetes` / `POST /api/paquetes` — listado y creación; admin ve todos, cliente solo vigentes.
+  - `GET  /api/reservas` / `POST /api/reservas` — listado y creación según rol.
+  - `POST /api/reservas/{id}/cancelar` — cancela reserva propia.
+  - Protección CSRF: `_verificar_csrf` exige `X-Requested-With: XMLHttpRequest` en todos los POST.
+  - Mapeo de excepciones → HTTP: 401 Auth, 403 Autorización, 409 Duplicado/Cupo, 422 Validación.
+  - Servicio de archivos estáticos montado en `/` desde `web/` (html=True).
+  - Compatibilidad mantenida con tests existentes de `/clientes/registro`.
+- **`web/index.html`** — SPA de un solo archivo (HTML + CSS + JS puro):
+  - Vista de autenticación con tabs login / registro.
+  - Vista cliente: paquetes disponibles con botón "Reservar" (form inline) + mis reservas con "Cancelar".
+  - Vista admin con tabs Destinos / Paquetes / Reservas + formularios de creación.
+  - Nunca usa `innerHTML`; todo el DOM se construye con `createElement` y `textContent`.
+  - Todos los POST envían `X-Requested-With: XMLHttpRequest`.
+
+Resultado: 44/44 tests pasan sin regresiones.
