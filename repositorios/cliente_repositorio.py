@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from excepciones import CorreoDuplicadoError, ValidacionError
 from modelos.cliente import Cliente
+from modelos.administrador import Administrador
 from repositorios.base_datos import BaseDatos
 from seguridad.seguridad import decrypt_data, encrypt_data
 
@@ -199,6 +200,11 @@ class ClienteRepositorio:
 
     @staticmethod
     def __desde_fila(fila):
+        if fila["rol"] == "ADMIN":
+            return Administrador(
+                fila["correo"], fila["password_hash"], fila["id"],
+                nombre=fila["nombre"],
+            )
         return Cliente(
             fila["nombre"],
             decrypt_data(fila["rut"]),

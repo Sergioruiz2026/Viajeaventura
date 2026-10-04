@@ -66,7 +66,7 @@ Inicia la API con `python -m uvicorn api:app --reload`. El registro está dispon
 	"rut": "12.345.678-5",
 	"email": "ana@example.com",
 	"telefono": "+56912345678",
-	"password": "ClaveFuerte1!"
+	"password": "<definida-localmente>"
 }
 ```
 
@@ -88,3 +88,28 @@ python main.py
 
 Los administradores se autentican con su nombre de usuario (campo correo).
 Las contraseñas no se documentan aquí; se gestionan desde `6. Administrar usuarios` en el menú ADMIN.
+
+## Verificación de la rúbrica
+
+La implementación mantiene la jerarquía `Usuario` abstracta con las clases
+concretas `Cliente` y `Administrador`. La persistencia usa SQLite y los
+servicios aplican las reglas de destinos, paquetes, reservas y seguridad.
+
+Para ejecutar todas las pruebas:
+
+```powershell
+py -3 -m pytest -q
+```
+
+La interfaz web se inicia con:
+
+```powershell
+py -3 -m uvicorn api:app --reload
+```
+
+Luego se abre `http://127.0.0.1:8000/`. El administrador inicial se crea con
+`VIAJES_ADMIN_USUARIO` y `VIAJES_ADMIN_PASSWORD`; los seis destinos de
+demostración se cargan al iniciar `main.py`.
+
+La trazabilidad entre requisitos, código y pruebas se encuentra en
+`trazabilidad_rubrica.md`.

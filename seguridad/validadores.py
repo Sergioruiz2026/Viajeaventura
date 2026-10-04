@@ -48,9 +48,9 @@ class Validador:
     def validar_contrasena(password):
         if not isinstance(password, str):
             raise ValidacionError("La contraseña debe ser texto.")
-        if len(password) < 8:
+        if not 10 <= len(password) <= 128:
             raise ValidacionError(
-                "La contraseña debe tener al menos 8 caracteres."
+                "La contraseña debe tener entre 10 y 128 caracteres."
             )
         if not re.search(r"[A-Z]", password):
             raise ValidacionError("Debe contener una mayúscula.")

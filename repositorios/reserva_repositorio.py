@@ -140,9 +140,11 @@ class ReservaRepositorio:
         with self.__base_datos.transaccion() as conexion:
             fila = conexion.execute(
                 """
-                SELECT r.estado, p.fecha_salida
+                  SELECT r.estado,
+                      COALESCE(ps.fecha_salida, p.fecha_salida) AS fecha_salida
                 FROM reservas AS r
                 JOIN paquetes AS p ON p.id = r.paquete_id
+                  LEFT JOIN paquete_salidas AS ps ON ps.id = r.salida_id
                 WHERE r.id = ? AND r.usuario_id = ?
                 """,
                 (reserva_id, usuario_id)

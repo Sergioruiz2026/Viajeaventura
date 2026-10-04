@@ -85,6 +85,39 @@ class PaqueteServicio:
         self.__paquete_repo.agregar(paquete)
         return paquete
 
+    def previsualizar_paquete(
+        self, nombre, nombres_destinos, fecha_salida, fecha_regreso,
+        cupo_maximo, margen_operacion=Decimal("0.20"), *, sesion
+    ):
+        exigir_rol(sesion, "ADMIN")
+        if not isinstance(nombres_destinos, list) or not 2 <= len(nombres_destinos) <= 5:
+            raise ValidacionError("El paquete debe tener entre 2 y 5 destinos.")
+        try:
+            margen = a_decimal(margen_operacion)
+        except (TypeError, ValueError, DecimalException) as error:
+            raise ValidacionError("El margen debe ser un decimal válido.") from error
+        if not margen.is_finite() or margen < 0:
+            raise ValidacionError("El margen no puede ser negativo.")
+        destinos = []
+        identidades = set()
+        for seleccion in nombres_destinos:
+            destino = self.__destino_repo.buscar_por_nombre(seleccion)
+            if not destino:
+                raise ValidacionError(f"Destino no encontrado: {seleccion}")
+            if destino.nombre.casefold() in identidades:
+                raise ValidacionError("No se pueden repetir destinos.")
+            if not destino.disponible:
+                raise ValidacionError(
+                    f"El destino '{destino.nombre}' no está disponible."
+                )
+            identidades.add(destino.nombre.casefold())
+            destinos.append(destino)
+        paquete = Paquete(
+            nombre, destinos, fecha_salida, fecha_regreso, cupo_maximo,
+            margen=margen,
+        )
+        return paquete.precio_por_persona
+
     def listar_paquetes(self, *, sesion):
         exigir_rol(sesion, "ADMIN")
         return self.__paquete_repo.listar()

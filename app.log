@@ -439,3 +439,120 @@ Traceback (most recent call last):
     )
 RuntimeError: Configure VIAJES_FERNET_KEY con una clave Fernet válida.
 
+2026-10-04 15:37:18,276 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:37:18,546 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:37:18,796 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:37:18,804 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 409 Conflict"
+2026-10-04 15:37:18,947 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:37:18,955 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:38:04,146 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:38:04,404 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:38:04,673 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:38:04,685 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 409 Conflict"
+2026-10-04 15:38:04,832 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:38:04,839 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:38:06,942 ERROR main: Error de configuración de seguridad en la interfaz de consola:
+Traceback (most recent call last):
+  File "C:\TRABAJO POO 3\Viajeaventura\main.py", line 440, in registrar_cliente
+    auth.registrar_cliente(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        nombre,
+        ^^^^^^^
+    ...<3 lines>...
+        password
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: Configure VIAJES_FERNET_KEY con una clave Fernet válida.
+
+2026-10-04 15:39:06,353 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:39:06,615 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:39:06,877 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:39:06,885 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 409 Conflict"
+2026-10-04 15:39:07,032 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:39:07,041 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:39:09,394 ERROR main: Error de configuración de seguridad en la interfaz de consola:
+Traceback (most recent call last):
+  File "C:\TRABAJO POO 3\Viajeaventura\main.py", line 440, in registrar_cliente
+    auth.registrar_cliente(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        nombre,
+        ^^^^^^^
+    ...<3 lines>...
+        password
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: Configure VIAJES_FERNET_KEY con una clave Fernet válida.
+
+2026-10-04 15:46:08,507 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:46:08,776 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:46:09,033 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:46:09,043 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 409 Conflict"
+2026-10-04 15:46:09,193 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:46:09,202 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:46:11,453 ERROR main: Error de configuración de seguridad en la interfaz de consola:
+Traceback (most recent call last):
+  File "C:\TRABAJO POO 3\Viajeaventura\main.py", line 440, in registrar_cliente
+    auth.registrar_cliente(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        nombre,
+        ^^^^^^^
+    ...<3 lines>...
+        password
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\xxben\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: Configure VIAJES_FERNET_KEY con una clave Fernet válida.
+
+2026-10-04 15:54:45,889 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:45,899 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,016 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:54:46,026 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 409 Conflict"
+2026-10-04 15:54:46,139 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 401 Unauthorized"
+2026-10-04 15:54:46,264 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,277 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,286 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,296 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,306 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,317 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,327 INFO httpx: HTTP Request: POST http://testserver/api/paquetes/previsualizar "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:46,348 INFO httpx: HTTP Request: POST http://testserver/api/paquetes "HTTP/1.1 201 Created"
+2026-10-04 15:54:46,359 INFO httpx: HTTP Request: POST http://testserver/api/paquetes "HTTP/1.1 409 Conflict"
+2026-10-04 15:54:46,501 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,516 INFO httpx: HTTP Request: POST http://testserver/api/destinos "HTTP/1.1 403 Forbidden"
+2026-10-04 15:54:46,543 INFO httpx: HTTP Request: POST http://testserver/api/reservas "HTTP/1.1 201 Created"
+2026-10-04 15:54:46,556 INFO httpx: HTTP Request: POST http://testserver/api/reservas "HTTP/1.1 409 Conflict"
+2026-10-04 15:54:46,688 INFO httpx: HTTP Request: POST http://testserver/clientes/registro "HTTP/1.1 201 Created"
+2026-10-04 15:54:46,823 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,833 INFO httpx: HTTP Request: POST http://testserver/api/reservas/1/cancelar "HTTP/1.1 409 Conflict"
+2026-10-04 15:54:46,854 INFO httpx: HTTP Request: POST http://testserver/api/reservas/1/cancelar "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,866 INFO httpx: HTTP Request: GET http://testserver/api/reservas "HTTP/1.1 200 OK"
+2026-10-04 15:54:46,891 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 403 Forbidden"
+2026-10-04 15:54:46,918 INFO httpx: HTTP Request: GET http://testserver/api/reservas "HTTP/1.1 401 Unauthorized"
+2026-10-04 15:54:46,936 INFO httpx: HTTP Request: POST http://testserver/api/destinos "HTTP/1.1 422 Unprocessable Entity"
+2026-10-04 15:54:57,116 INFO httpx: HTTP Request: POST http://testserver/api/login "HTTP/1.1 401 Unauthorized"

@@ -1,8 +1,9 @@
 """implementacion de la clase Cliente para el proyecto ViajesAventura"""
 
 from seguridad.enmascarado import mask_phone, mask_rut
+from modelos.usuario import Usuario
 
-class Cliente:
+class Cliente(Usuario):
     def __init__(self,
         nombre,
         rut,
@@ -12,29 +13,28 @@ class Cliente:
         rol="CLIENTE",
         usuario_id=None):
 
-        self.__id = usuario_id
+        super().__init__(nombre, correo, password_hash, usuario_id)
         self.__nombre = nombre
         self.__rut = rut
         self.__correo = correo
         self.__telefono = telefono
-        self.__password_hash = password_hash
         self.__rol = rol
 
     @property
     def id(self):
-        return self.__id
+        return super().id
 
     @property
     def nombre(self):
-        return self.__nombre
+        return super().nombre
 
     @property
     def correo(self):
-        return self.__correo
+        return super().correo
 
     @property
     def password_hash(self):
-        return self.__password_hash
+        return super().password_hash
 
     @property
     def rol(self):
@@ -47,6 +47,9 @@ class Cliente:
     @property
     def telefono(self):
         return self.__telefono
+
+    def puede_reservar(self):
+        return self.__rol == "CLIENTE"
 
     def __str__(self):
         return (
