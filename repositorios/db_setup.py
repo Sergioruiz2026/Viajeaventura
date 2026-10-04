@@ -39,6 +39,7 @@ class BaseDatos:
         self.__conexion.execute("PRAGMA busy_timeout = 5000")
         try:
             self.__crear_esquema()
+            self.__migrar_schema()
             if migrar_desde is not None:
                 self.migrar_desde(migrar_desde)
         except BaseException:
@@ -183,7 +184,55 @@ class BaseDatos:
         finally:
             anterior.close()
 
+    def __migrar_schema(self):
+        """Migraciones incrementales de schema (seguras de ejecutar en cada arranque)."""
+        # 1. Agregar salida_id a reservas si aun no existe
+        tiene_col = self.__conexion.execute(
+            "SELECT COUNT(*) FROM pragma_table_info('reservas') WHERE name='salida_id'"
+        ).fetchone()[0]
+        if not tiene_col:
+            self.__conexion.execute(
+                "ALTER TABLE reservas ADD COLUMN salida_id INTEGER"
+            )
+            self.__conexion.commit()
+
+        # 2. Crear salida inicial para cada paquete que aun no tenga ninguna
+        paquetes_sin_salida = self.__conexion.execute(
+            """SELECT id, fecha_salida, fecha_regreso, cupo_maximo
+               FROM paquetes
+               WHERE id NOT IN (SELECT paquete_id FROM paquete_salidas)"""
+        ).fetchall()
+        for p in paquetes_sin_salida:
+            with self.transaccion() as con:
+                con.execute(
+                    """INSERT INTO paquete_salidas
+                       (paquete_id, fecha_salida, fecha_regreso, cupo_maximo)
+                       VALUES (?, ?, ?, ?)""",
+                    (p["id"], p["fecha_salida"], p["fecha_regreso"], p["cupo_maximo"])
+                )
+
+        # 3. Vincular reservas existentes (sin salida_id) a la primera salida de su paquete
+        with self.transaccion() as con:
+            con.execute(
+                """UPDATE reservas
+                   SET salida_id = (
+                       SELECT ps.id FROM paquete_salidas ps
+                       WHERE ps.paquete_id = reservas.paquete_id
+                       ORDER BY ps.id LIMIT 1
+                   )
+                   WHERE salida_id IS NULL"""
+            )
+
     def __crear_esquema(self):
+        # Eliminar triggers obsoletos antes de recrearlos con soporte de salidas
+        self.__conexion.executescript(
+            """
+            DROP TRIGGER IF EXISTS reserva_unica_activa_insert;
+            DROP TRIGGER IF EXISTS reserva_unica_activa_update;
+            DROP TRIGGER IF EXISTS reserva_cupo_insert;
+            DROP TRIGGER IF EXISTS reserva_cupo_update;
+            """
+        )
         self.__conexion.executescript(
             """
             CREATE TABLE IF NOT EXISTS destinos (
@@ -240,6 +289,20 @@ class BaseDatos:
                 SELECT RAISE(ABORT, 'Un paquete debe conservar al menos 2 destinos.');
             END;
 
+            CREATE TABLE IF NOT EXISTS paquete_salidas (
+                id INTEGER PRIMARY KEY,
+                paquete_id INTEGER NOT NULL REFERENCES paquetes(id)
+                    ON DELETE CASCADE,
+                fecha_salida TEXT NOT NULL,
+                fecha_regreso TEXT NOT NULL CHECK (
+                    julianday(fecha_regreso) > julianday(fecha_salida)
+                ),
+                cupo_maximo INTEGER NOT NULL CHECK (cupo_maximo > 0)
+            );
+
+            CREATE INDEX IF NOT EXISTS salidas_paquete
+                ON paquete_salidas(paquete_id, fecha_salida);
+
             CREATE TABLE IF NOT EXISTS usuarios (
                 id INTEGER PRIMARY KEY,
                 nombre TEXT NOT NULL,
@@ -270,9 +333,28 @@ class BaseDatos:
                 CREATE INDEX IF NOT EXISTS reservas_cliente_paquete_estado
                     ON reservas(usuario_id, paquete_id, estado);
 
-                CREATE TRIGGER IF NOT EXISTS reserva_unica_activa_insert
+                CREATE INDEX IF NOT EXISTS reservas_salida_estado
+                    ON reservas(salida_id, estado);
+
+                -- Unicidad por SALIDA (nueva ruta con salida_id)
+                CREATE TRIGGER IF NOT EXISTS reserva_unica_salida_insert
                 BEFORE INSERT ON reservas
-                WHEN NEW.estado = 'ACTIVA'
+                WHEN NEW.estado = 'ACTIVA' AND NEW.salida_id IS NOT NULL
+                 AND EXISTS (
+                     SELECT 1 FROM reservas
+                     WHERE usuario_id = NEW.usuario_id
+                       AND salida_id = NEW.salida_id
+                       AND estado = 'ACTIVA'
+                 )
+                BEGIN
+                    SELECT RAISE(ABORT,
+                        'Ya existe una reserva activa para este cliente y salida.');
+                END;
+
+                -- Unicidad por PAQUETE (ruta legada sin salida_id)
+                CREATE TRIGGER IF NOT EXISTS reserva_unica_paquete_insert
+                BEFORE INSERT ON reservas
+                WHEN NEW.estado = 'ACTIVA' AND NEW.salida_id IS NULL
                  AND EXISTS (
                      SELECT 1 FROM reservas
                      WHERE usuario_id = NEW.usuario_id
@@ -280,54 +362,36 @@ class BaseDatos:
                        AND estado = 'ACTIVA'
                  )
                 BEGIN
-                    SELECT RAISE(
-                        ABORT,
-                        'Ya existe una reserva activa para este cliente y paquete.'
-                    );
+                    SELECT RAISE(ABORT,
+                        'Ya existe una reserva activa para este cliente y paquete.');
                 END;
 
-                CREATE TRIGGER IF NOT EXISTS reserva_unica_activa_update
-                BEFORE UPDATE OF usuario_id, paquete_id, estado ON reservas
-                WHEN NEW.estado = 'ACTIVA'
-                 AND EXISTS (
-                     SELECT 1 FROM reservas
-                     WHERE usuario_id = NEW.usuario_id
-                       AND paquete_id = NEW.paquete_id
-                       AND estado = 'ACTIVA'
-                       AND id != OLD.id
-                 )
-                BEGIN
-                    SELECT RAISE(
-                        ABORT,
-                        'Ya existe una reserva activa para este cliente y paquete.'
-                    );
-                END;
-
-            CREATE TRIGGER IF NOT EXISTS reserva_cupo_insert
+            -- Cupo por SALIDA
+            CREATE TRIGGER IF NOT EXISTS reserva_cupo_salida_insert
             BEFORE INSERT ON reservas
-            WHEN NEW.estado = 'ACTIVA'
+            WHEN NEW.estado = 'ACTIVA' AND NEW.salida_id IS NOT NULL
              AND COALESCE((
                  SELECT SUM(cantidad_personas) FROM reservas
-                 WHERE paquete_id = NEW.paquete_id AND estado = 'ACTIVA'
+                 WHERE salida_id = NEW.salida_id AND estado = 'ACTIVA'
              ), 0) + NEW.cantidad_personas > (
-                 SELECT cupo_maximo FROM paquetes WHERE id = NEW.paquete_id
+                 SELECT cupo_maximo FROM paquete_salidas WHERE id = NEW.salida_id
              )
             BEGIN
-                SELECT RAISE(ABORT, 'Cupo máximo del paquete excedido.');
+                SELECT RAISE(ABORT, 'Cupo maximo de la salida excedido.');
             END;
 
-            CREATE TRIGGER IF NOT EXISTS reserva_cupo_update
-            BEFORE UPDATE OF paquete_id, cantidad_personas, estado ON reservas
-            WHEN NEW.estado = 'ACTIVA'
+            -- Cupo por PAQUETE (legado)
+            CREATE TRIGGER IF NOT EXISTS reserva_cupo_paquete_insert
+            BEFORE INSERT ON reservas
+            WHEN NEW.estado = 'ACTIVA' AND NEW.salida_id IS NULL
              AND COALESCE((
                  SELECT SUM(cantidad_personas) FROM reservas
                  WHERE paquete_id = NEW.paquete_id AND estado = 'ACTIVA'
-                   AND id != OLD.id
              ), 0) + NEW.cantidad_personas > (
                  SELECT cupo_maximo FROM paquetes WHERE id = NEW.paquete_id
              )
             BEGIN
-                SELECT RAISE(ABORT, 'Cupo máximo del paquete excedido.');
+                SELECT RAISE(ABORT, 'Cupo maximo del paquete excedido.');
             END;
 
             CREATE INDEX IF NOT EXISTS reservas_paquete_estado

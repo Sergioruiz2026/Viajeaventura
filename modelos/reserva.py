@@ -17,7 +17,10 @@ class Reserva:
         total=None,
         *,
         id_reserva=None,
-        estado="ACTIVA"
+        estado="ACTIVA",
+        salida_id=None,
+        salida_fecha_salida=None,
+        salida_fecha_regreso=None,
     ):
         if (
             isinstance(cantidad_personas, bool)
@@ -34,6 +37,9 @@ class Reserva:
         self.__cantidad_personas = cantidad_personas
         self.__fecha_emision = fecha_emision or datetime.now()
         self.__estado = estado
+        self.__salida_id = salida_id
+        self.__salida_fecha_salida = salida_fecha_salida
+        self.__salida_fecha_regreso = salida_fecha_regreso
         self.__total = redondear_clp(
             a_decimal(paquete.precio_por_persona) * cantidad_personas
             if total is None
@@ -67,6 +73,18 @@ class Reserva:
     @property
     def estado(self):
         return self.__estado
+
+    @property
+    def salida_id(self):
+        return self.__salida_id
+
+    @property
+    def salida_fecha_salida(self):
+        return self.__salida_fecha_salida
+
+    @property
+    def salida_fecha_regreso(self):
+        return self.__salida_fecha_regreso
 
     def __str__(self):
         identificador = f"#{self.__id}" if self.__id is not None else "nueva"

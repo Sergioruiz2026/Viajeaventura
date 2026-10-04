@@ -7,13 +7,15 @@ from excepciones import ValidacionError
 from seguridad.montos import a_decimal, aplicar_margen_clp
 from seguridad.autorizacion import exigir_rol
 from seguridad.normalizador import capitalizar_titulo
+from excepciones import ValidacionError
 
 
 class PaqueteServicio:
 
-    def __init__(self, paquete_repo, destino_repo):
+    def __init__(self, paquete_repo, destino_repo, salida_repo=None):
         self.__paquete_repo = paquete_repo
         self.__destino_repo = destino_repo
+        self.__salida_repo = salida_repo
 
     def crear_paquete(
         self,
@@ -89,7 +91,34 @@ class PaqueteServicio:
 
     def listar_vigentes(self, *, sesion):
         exigir_rol(sesion, "CLIENTE")
+        if self.__salida_repo is not None:
+            return self.__salida_repo.salidas_vigentes()
         return self.__paquete_repo.paquetes_vigentes()
+
+    def listar_salidas_por_paquete(self, paquete_id, *, sesion):
+        exigir_rol(sesion, "ADMIN")
+        if self.__salida_repo is None:
+            return []
+        return self.__salida_repo.listar_por_paquete(paquete_id)
+
+    def agregar_salida(
+        self, paquete_id, fecha_salida, fecha_regreso, cupo_maximo, *, sesion
+    ):
+        exigir_rol(sesion, "ADMIN")
+        if self.__salida_repo is None:
+            raise ValidacionError("Repositorio de salidas no disponible.")
+        if not self.__paquete_repo.buscar_por_id(paquete_id):
+            raise ValidacionError("Paquete no encontrado.")
+        if fecha_regreso <= fecha_salida:
+            raise ValidacionError(
+                "La fecha de regreso debe ser posterior a la de salida."
+            )
+        if cupo_maximo <= 0:
+            raise ValidacionError("El cupo debe ser mayor que cero.")
+        salida_id = self.__salida_repo.agregar(
+            paquete_id, fecha_salida, fecha_regreso, cupo_maximo
+        )
+        return self.__salida_repo.buscar_por_id(salida_id)
 
     def buscar_paquete(self, nombre, *, sesion):
         exigir_rol(sesion, "ADMIN")

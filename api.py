@@ -30,6 +30,7 @@ from repositorios.cliente_repositorio import ClienteRepositorio
 from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
 from repositorios.reserva_repositorio import ReservaRepositorio
+from repositorios.salida_repositorio import SalidaRepositorio
 from seguridad.logging_config import enmascarar_texto
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.catalogo_servicio import CatalogoServicio
@@ -72,8 +73,14 @@ class PaqueteRequest(BaseModel):
 
 
 class ReservaRequest(BaseModel):
-    paquete_id: int
+    salida_id: int
     cantidad_personas: int
+
+
+class NuevaSalidaRequest(BaseModel):
+    fecha_salida: date
+    fecha_regreso: date
+    cupo_maximo: int
 
 
 class RecuperarContrasenaRequest(BaseModel):
@@ -151,10 +158,12 @@ class _Servicios:
         paquete_repo = PaqueteRepositorio(base_datos)
         cliente_repo = ClienteRepositorio(base_datos)
         reserva_repo = ReservaRepositorio(base_datos)
+        salida_repo  = SalidaRepositorio(base_datos)
         self.autenticacion = AutenticacionServicio(cliente_repo)
         self.catalogo = CatalogoServicio(destino_repo)
-        self.paquetes = PaqueteServicio(paquete_repo, destino_repo)
-        self.reservas = ReservaServicio(reserva_repo, paquete_repo)
+        self.paquetes = PaqueteServicio(paquete_repo, destino_repo, salida_repo)
+        self.reservas = ReservaServicio(reserva_repo, paquete_repo, salida_repo)
+        self.salidas  = salida_repo
 
 
 def _servicios_dep():

@@ -17,7 +17,7 @@ class ReservaRepositorio:
         self.__clientes = ClienteRepositorio(self.__base_datos)
         self.__paquetes = PaqueteRepositorio(self.__base_datos)
 
-    def agregar(self, reserva, paquete_id=None):
+    def agregar(self, reserva, paquete_id=None, salida_id=None):
         reserva_id = None
         try:
             with self.__base_datos.transaccion() as conexion:
@@ -40,42 +40,60 @@ class ReservaRepositorio:
                         "El usuario y el paquete deben existir en SQLite."
                     )
 
-                reserva_activa = conexion.execute(
-                    """
-                    SELECT 1 FROM reservas
-                    WHERE usuario_id = ? AND paquete_id = ?
-                      AND estado = 'ACTIVA'
-                    LIMIT 1
-                    """,
-                    (cliente["id"], paquete["id"])
-                ).fetchone()
+                # Unicidad: por salida si existe, por paquete en ruta legada
+                if salida_id is not None:
+                    reserva_activa = conexion.execute(
+                        """SELECT 1 FROM reservas
+                           WHERE usuario_id = ? AND salida_id = ?
+                             AND estado = 'ACTIVA' LIMIT 1""",
+                        (cliente["id"], salida_id)
+                    ).fetchone()
+                    msg_dup = "Ya tienes una reserva activa para esta salida."
+                else:
+                    reserva_activa = conexion.execute(
+                        """SELECT 1 FROM reservas
+                           WHERE usuario_id = ? AND paquete_id = ?
+                             AND estado = 'ACTIVA' LIMIT 1""",
+                        (cliente["id"], paquete["id"])
+                    ).fetchone()
+                    msg_dup = "Ya tienes una reserva activa para este paquete."
                 if reserva_activa is not None:
-                    raise ReservaNoPermitidaError(
-                        "Ya tienes una reserva activa para este paquete."
-                    )
+                    raise ReservaNoPermitidaError(msg_dup)
 
-                ocupados = conexion.execute(
-                    """
-                    SELECT COALESCE(SUM(cantidad_personas), 0)
-                    FROM reservas WHERE paquete_id = ? AND estado = 'ACTIVA'
-                    """,
-                    (paquete["id"],)
-                ).fetchone()[0]
-                disponibles = paquete["cupo_maximo"] - ocupados
+                # Cupo: por salida si existe, por paquete en ruta legada
+                if salida_id is not None:
+                    salida_fila = conexion.execute(
+                        "SELECT cupo_maximo FROM paquete_salidas WHERE id = ?",
+                        (salida_id,)
+                    ).fetchone()
+                    cupo_max = salida_fila["cupo_maximo"] if salida_fila else paquete["cupo_maximo"]
+                    ocupados = conexion.execute(
+                        """SELECT COALESCE(SUM(cantidad_personas), 0)
+                           FROM reservas WHERE salida_id = ? AND estado = 'ACTIVA'""",
+                        (salida_id,)
+                    ).fetchone()[0]
+                else:
+                    cupo_max = paquete["cupo_maximo"]
+                    ocupados = conexion.execute(
+                        """SELECT COALESCE(SUM(cantidad_personas), 0)
+                           FROM reservas WHERE paquete_id = ? AND estado = 'ACTIVA'""",
+                        (paquete["id"],)
+                    ).fetchone()[0]
+                disponibles = cupo_max - ocupados
                 if reserva.cantidad_personas > disponibles:
                     raise CupoInsuficienteError(
                         f"Solo quedan {disponibles} cupos."
                     )
+
                 cursor = conexion.execute(
-                    """
-                    INSERT INTO reservas (
-                        usuario_id, paquete_id, cantidad_personas,
-                        fecha_emision, total
-                    ) VALUES (?, ?, ?, ?, ?)
-                    """,
+                    """INSERT INTO reservas (
+                           usuario_id, paquete_id, salida_id, cantidad_personas,
+                           fecha_emision, total
+                       ) VALUES (?, ?, ?, ?, ?, ?)""",
                     (
                         cliente["id"],
                         paquete["id"],
+                        salida_id,
                         reserva.cantidad_personas,
                         reserva.fecha_emision.isoformat(),
                         int(reserva.total)
@@ -84,18 +102,11 @@ class ReservaRepositorio:
                 reserva_id = cursor.lastrowid
         except sqlite3.IntegrityError as error:
             detalle = str(error)
-            if "Ya existe una reserva activa" in detalle:
+            if "Ya existe una reserva activa" in detalle or "unica" in detalle.lower():
                 raise ReservaNoPermitidaError(
-                    "Ya tienes una reserva activa para este paquete."
+                    "Ya tienes una reserva activa para esta salida."
                 ) from error
-            if (
-                "reservas.paquete_id" in detalle
-                and "reservas.usuario_id" in detalle
-            ):
-                raise ReservaNoPermitidaError(
-                    "Ya tienes una reserva activa para este paquete."
-                ) from error
-            if "Cupo máximo del paquete excedido" in detalle:
+            if "Cupo maximo" in detalle or "Cupo máximo" in detalle:
                 raise CupoInsuficienteError(
                     "No hay cupos suficientes para esta reserva."
                 ) from error
@@ -188,20 +199,38 @@ class ReservaRepositorio:
         return fila["ocupados"]
 
     def __desde_fila(self, fila):
-        cliente = self.__conexion.execute(
+        cliente_fila = self.__conexion.execute(
             "SELECT * FROM usuarios WHERE id = ?",
             (fila["usuario_id"],)
         ).fetchone()
-        paquete = self.__conexion.execute(
+        paquete_fila = self.__conexion.execute(
             "SELECT nombre FROM paquetes WHERE id = ?",
             (fila["paquete_id"],)
         ).fetchone()
+
+        # Fechas de la salida específica (si existe)
+        salida_id = fila["salida_id"] if "salida_id" in fila.keys() else None
+        salida_fecha_salida = None
+        salida_fecha_regreso = None
+        if salida_id is not None:
+            salida_fila = self.__conexion.execute(
+                "SELECT fecha_salida, fecha_regreso FROM paquete_salidas WHERE id = ?",
+                (salida_id,)
+            ).fetchone()
+            if salida_fila:
+                from datetime import date
+                salida_fecha_salida = date.fromisoformat(salida_fila["fecha_salida"])
+                salida_fecha_regreso = date.fromisoformat(salida_fila["fecha_regreso"])
+
         return Reserva(
-            self.__clientes.buscar_por_correo(cliente["correo"]),
-            self.__paquetes.buscar_por_nombre(paquete["nombre"]),
+            self.__clientes.buscar_por_correo(cliente_fila["correo"]),
+            self.__paquetes.buscar_por_nombre(paquete_fila["nombre"]),
             fila["cantidad_personas"],
             datetime.fromisoformat(fila["fecha_emision"]),
             fila["total"],
             id_reserva=fila["id"],
-            estado=fila["estado"]
+            estado=fila["estado"],
+            salida_id=salida_id,
+            salida_fecha_salida=salida_fecha_salida,
+            salida_fecha_regreso=salida_fecha_regreso,
         )

@@ -74,3 +74,109 @@ Archivos creados/modificados:
   - Todos los POST envían `X-Requested-With: XMLHttpRequest`.
 
 Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+### Ejecución del servidor web
+**Prompt:** _"ejecuta index"_
+
+Se levantó el servidor FastAPI con uvicorn en `http://127.0.0.1:8000 --reload`. Verificación: `GET /` → HTTP 200, `GET /api/yo` → HTTP 401 (correcto sin sesión).
+
+---
+
+### Recuperación de contraseña, toggle mostrar/ocultar y login limpio al cerrar sesión
+**Prompt:** _"creemos en la inicializacion de la web una recuperacion de contraseña por si al cliente se le olvida y otra al colacar la contraseña dar la opcion de ver o no esta y una vez que pueda entrar al sistema con los datos y quiera salir la seccion del login aparesca refrescado no mostrando en memoria la ultima coneccion"_
+
+Archivos modificados:
+- **`servicios/autenticacion_servicio.py`** — Nuevo método `recuperar_contrasena(correo, rut, nueva_password)`: verifica identidad por correo + RUT, rechaza admins, actualiza hash.
+- **`api.py`** — Modelo `RecuperarContrasenaRequest` · endpoint `POST /api/recuperar-contrasena`.
+- **`web/index.html`** — Tres mejoras:
+  1. Tercera pestaña "Recuperar contraseña" con formulario (correo + RUT + nueva contraseña).
+  2. Botón Mostrar/Ocultar en todos los campos de contraseña (login, registro, recuperar).
+  3. `resetFormularioAuth()` al cerrar sesión: vacía campos, restaura toggles, limpia alertas y activa pestaña "Iniciar sesión".
+
+Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+### Normalización ortográfica de nombres y lugares
+**Prompt:** _"cuando se solicita alguna informacion de ingreso de datos, paquetes, reservas o informacion importante aunque esta se escriba con minulscula al aparecer en pantalla se muestre con mayuscula la primera palabra y todo los que sea nombres paises ciudades etc siempre deben ser con mayuscula las primera letra para mantener un orden ortografico"_
+
+Archivos creados/modificados:
+- **`seguridad/normalizador.py`** — Nuevo módulo con `capitalizar_titulo()` y `capitalizar_oracion()`.
+- **`servicios/autenticacion_servicio.py`** — Normaliza nombre del cliente al registrar.
+- **`servicios/catalogo_servicio.py`** — Normaliza nombre y zona (título) y descripcion (oración) al registrar destino.
+- **`servicios/paquete_servicio.py`** — Normaliza nombre del paquete al crear.
+- **`web/index.html`** — Funciones `fTitulo()` y `fOracion()` en todas las celdas con nombres, zonas, paquetes y cabecera de usuario.
+
+Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+## [2026-10-04]
+
+### Edición de paquetes (cupo y fechas)
+**Prompt:** _"Al crear un paquete no hay ninguna opcion de modificar este, por ejemplo se agotaron las reservas y si el admin quisiera aumentar la cantidad de disponibilidad no hay como hacerlo o por ejemplo si pusimos de una fecha x a una fecha y no hay como agregar sobre la misma otra disponibilidad del paquete en otras fechas"_
+
+Archivos creados/modificados:
+- **`repositorios/paquete_repositorio.py`** — Nuevo método `actualizar()`: UPDATE sobre `paquetes` por `id`.
+- **`servicios/paquete_servicio.py`** — Nuevo método `actualizar_paquete()`: aplica defaults para campos no enviados, valida cupo ≥ reservas activas, recalcula precio si cambia el margen.
+- **`api.py`** — Helper `_serializar_paquete()` · modelo `ActualizarPaqueteRequest` · `PATCH /api/paquetes/{id}` · listado incluye `cupo_maximo` y `margen_operacion`.
+- **`web/index.html`** — Columnas Cupo máx / Disponibles · botón Editar por fila · formulario inline pre-cargado.
+
+Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+### Registro de prompts en CHANGELOG
+**Prompt:** _"registrar los ultimos prompts utilizados sin borrar los que estan"_
+
+Se agregaron al `CHANGELOG.md` los 5 prompts de la sesión pendientes de registro.
+
+---
+
+### Rediseño del formulario de edición de paquete como "Nueva salida"
+**Prompt:** _"me da la opcion de editar pero esta edicion debe ser para agregar otra fecha del mismo paquete y asi debe quedar mas limpia la iteracion"_
+
+Cambios en `web/index.html`:
+- Botón renombrado de "Editar" a **"+ Nueva salida"**.
+- Función `toggleFormEditarPaquete` reemplazada por `toggleFormNuevaSalida`: formulario simplificado con solo 3 campos (fecha de salida, fecha de regreso, cupo máximo).
+- Encabezado contextual: "Nueva salida para: *[nombre del paquete]*".
+- Bloque de referencia que muestra la salida vigente antes de editar.
+- Envía únicamente los 3 campos al `PATCH /api/paquetes/{id}`.
+
+Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+### Diagnóstico y corrección de error 405 + formato de fechas
+**Prompt:** _[imagen mostrando "Method Not Allowed" al guardar nueva salida]_
+
+Causa raíz: dos procesos uvicorn corriendo simultáneamente en el puerto 8000; el proceso original (sin el endpoint PATCH) seguía atendiendo peticiones.
+
+Acciones:
+- Se terminaron ambos procesos y se relanzó uvicorn limpiamente.
+- Verificación vía `netstat` y prueba directa del endpoint confirmaron el fix.
+
+---
+
+### Diagnóstico "no lo guarda" + formato DD/MM/YYYY + confirmación de guardado
+**Prompt:** _"no os guarda ya no genera el error pero como menciono no lo guarda"_
+
+Diagnóstico: el PATCH **sí guardaba** en la DB (fechas cambiaron de `2026-10-31→2026-11-10` a `2026-11-09→2026-11-16`). El problema era de percepción:
+1. Las fechas en la tabla se mostraban en `YYYY-MM-DD` (ISO) mientras el datepicker las mostraba en `DD/MM/YYYY`.
+2. No había confirmación visual de que el guardado fue exitoso.
+
+Cambios en `web/index.html`:
+- Nueva función `fFecha(iso)` que convierte `YYYY-MM-DD` → `DD/MM/YYYY`.
+- Aplicada en todas las columnas de fechas: paquetes (cliente y admin), reservas (ambas vistas), panel de referencia de la salida actual.
+- Al guardar una nueva salida se muestra un **mensaje de confirmación verde** durante 5 segundos con las fechas y cupo efectivamente guardados (tomados de la respuesta real de la API).
+
+Resultado: 44/44 tests pasan sin regresiones.
+
+---
+
+### Registro de prompts en CHANGELOG
+**Prompt:** _"registra los prompts"_
+
+Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registro.

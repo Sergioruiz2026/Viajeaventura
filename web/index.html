@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -277,6 +277,13 @@
 
 <script>
 'use strict';
+
+/* ─── Formateador de fechas ISO → DD/MM/YYYY ────────────────────── */
+function fFecha(iso) {
+  if (!iso) return iso;
+  const [y, m, d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
 
 /* ─── Formateadores ortográficos ─────────────────────────────────── */
 const _MIN_ES = new Set([
@@ -573,8 +580,8 @@ function tablaPaquetesCliente(paquetes) {
     const tr = el('tr');
     tr.appendChild(el('td', fTitulo(p.nombre)));
     tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
-    tr.appendChild(el('td', p.fecha_salida));
-    tr.appendChild(el('td', p.fecha_regreso));
+    tr.appendChild(el('td', fFecha(p.fecha_salida)));
+    tr.appendChild(el('td', fFecha(p.fecha_regreso)));
     tr.appendChild(el('td', String(p.cupo_disponible)));
     const tdAcc = el('td');
     if (p.cupo_disponible > 0) {
@@ -749,16 +756,16 @@ async function cargarPaquetesAdmin() {
       tr.appendChild(el('td', String(p.id)));
       tr.appendChild(el('td', fTitulo(p.nombre)));
       tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
-      tr.appendChild(el('td', p.fecha_salida));
-      tr.appendChild(el('td', p.fecha_regreso));
+      tr.appendChild(el('td', fFecha(p.fecha_salida)));
+      tr.appendChild(el('td', fFecha(p.fecha_regreso)));
       tr.appendChild(el('td', String(p.cupo_maximo)));
       tr.appendChild(el('td', String(p.cupo_disponible)));
       const tdEst = el('td', p.estado);
       tdEst.className = p.estado === 'Vigente' ? 'estado-vigente' : 'estado-vencido';
       tr.appendChild(tdEst);
       const tdAcc = el('td');
-      const btnEdit = el('button', 'Editar', { cls: 'btn btn-sm btn-primary' });
-      btnEdit.addEventListener('click', () => toggleFormEditarPaquete(p, tr, tbody));
+      const btnEdit = el('button', '+ Nueva salida', { cls: 'btn btn-sm btn-primary' });
+      btnEdit.addEventListener('click', () => toggleFormNuevaSalida(p, tr, tbody));
       tdAcc.appendChild(btnEdit);
       tr.appendChild(tdAcc);
       tbody.appendChild(tr);
@@ -768,7 +775,7 @@ async function cargarPaquetesAdmin() {
   } catch (e) { cont.textContent = 'Error: ' + e.message; }
 }
 
-function toggleFormEditarPaquete(paquete, trPaquete, tbody) {
+function toggleFormNuevaSalida(paquete, trPaquete, tbody) {
   const ant = tbody.querySelector('.fila-editar');
   if (ant) {
     const esElMismo = ant.dataset.pid === String(paquete.id);
@@ -779,47 +786,61 @@ function toggleFormEditarPaquete(paquete, trPaquete, tbody) {
   const trF = el('tr', null, { cls: 'fila-editar' });
   trF.dataset.pid = String(paquete.id);
   const td = el('td', null, { colspan: '9' });
-  td.style.background = '#fffff0';
-  td.style.padding = '14px 12px';
+  td.style.cssText = 'background:#f0f7ff;padding:16px 14px;border-left:3px solid #1a56db';
 
-  const grid = el('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end';
+  // Encabezado con nombre del paquete
+  const titulo = el('p');
+  titulo.style.cssText = 'font-size:.85rem;font-weight:700;color:#1e3a8a;margin-bottom:6px';
+  const etiq = el('span', 'Nueva salida para: ');
+  etiq.style.cssText = 'font-weight:400;color:#4a5568';
+  titulo.appendChild(etiq);
+  titulo.appendChild(el('span', fTitulo(paquete.nombre)));
+  td.appendChild(titulo);
 
-  function campo(lbl, inp) {
+  // Salida vigente como referencia
+  const ref = el('p');
+  ref.style.cssText = 'font-size:.78rem;color:#718096;margin-bottom:14px';
+  const refLbl = el('span', 'Salida actual: ');
+  refLbl.style.fontWeight = '600';
+  ref.appendChild(refLbl);
+  ref.appendChild(el('span',
+    fFecha(paquete.fecha_salida) + ' → ' + fFecha(paquete.fecha_regreso) +
+    ' | Cupo: ' + paquete.cupo_maximo +
+    ' (disponibles: ' + paquete.cupo_disponible + ')'
+  ));
+  td.appendChild(ref);
+
+  // Tres campos en linea
+  const fila = el('div');
+  fila.style.cssText = 'display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap';
+
+  function campoInline(lbl, inp) {
     const d = el('div', null, { cls: 'campo' });
+    d.style.minWidth = '150px';
     d.appendChild(el('label', lbl));
     d.appendChild(inp);
     return d;
   }
 
-  const inpNombre  = el('input', null, { type: 'text' });
-  inpNombre.value  = paquete.nombre;
   const inpSalida  = el('input', null, { type: 'date' });
-  inpSalida.value  = paquete.fecha_salida;
   const inpRegreso = el('input', null, { type: 'date' });
-  inpRegreso.value = paquete.fecha_regreso;
   const inpCupo    = el('input', null, { type: 'number', min: '1' });
   inpCupo.value    = paquete.cupo_maximo;
-  const inpMargen  = el('input', null, { type: 'number', min: '0', max: '200', placeholder: 'sin cambio' });
-  inpMargen.value  = paquete.margen_operacion != null
-    ? (paquete.margen_operacion * 100).toFixed(0) : '';
 
-  grid.appendChild(campo('Nombre', inpNombre));
-  grid.appendChild(campo('Fecha de salida', inpSalida));
-  grid.appendChild(campo('Fecha de regreso', inpRegreso));
-  grid.appendChild(campo('Cupo máximo', inpCupo));
-  grid.appendChild(campo('Margen %', inpMargen));
+  fila.appendChild(campoInline('Nueva fecha de salida', inpSalida));
+  fila.appendChild(campoInline('Nueva fecha de regreso', inpRegreso));
+  fila.appendChild(campoInline('Cupo maximo', inpCupo));
 
   const divBtns = el('div', null, { cls: 'campo' });
-  divBtns.appendChild(el('label', ' '));
+  divBtns.appendChild(el('label', ' '));
   const bRow = el('div');
   bRow.style.cssText = 'display:flex;gap:6px';
-  const btnGuardar  = el('button', 'Guardar',  { cls: 'btn btn-sm btn-primary' });
-  const btnCancelar = el('button', 'Cancelar', { cls: 'btn btn-sm btn-secondary' });
+  const btnGuardar  = el('button', 'Guardar salida', { cls: 'btn btn-sm btn-primary' });
+  const btnCancelar = el('button', 'Cancelar',       { cls: 'btn btn-sm btn-secondary' });
   bRow.appendChild(btnGuardar);
   bRow.appendChild(btnCancelar);
   divBtns.appendChild(bRow);
-  grid.appendChild(divBtns);
+  fila.appendChild(divBtns);
 
   const errDiv = el('p');
   errDiv.className = 'alerta alerta-error oculto';
@@ -827,19 +848,29 @@ function toggleFormEditarPaquete(paquete, trPaquete, tbody) {
 
   btnCancelar.addEventListener('click', () => trF.remove());
   btnGuardar.addEventListener('click', async () => {
+    if (!inpSalida.value || !inpRegreso.value) {
+      errDiv.textContent = 'Ingresa ambas fechas.';
+      errDiv.classList.remove('oculto');
+      return;
+    }
     btnGuardar.disabled = true;
     errDiv.classList.add('oculto');
-    const margenVal = inpMargen.value.trim();
-    const datos = {
-      nombre:           inpNombre.value.trim()  || null,
-      fecha_salida:     inpSalida.value         || null,
-      fecha_regreso:    inpRegreso.value        || null,
-      cupo_maximo:      parseInt(inpCupo.value, 10) || null,
-      margen_operacion: margenVal !== '' ? parseFloat(margenVal) / 100 : null,
-    };
     try {
-      await api('PATCH', '/api/paquetes/' + paquete.id, datos);
+      const res = await api('PATCH', '/api/paquetes/' + paquete.id, {
+        fecha_salida:  inpSalida.value,
+        fecha_regreso: inpRegreso.value,
+        cupo_maximo:   parseInt(inpCupo.value, 10) || paquete.cupo_maximo,
+      });
       trF.remove();
+      // Mostrar confirmacion en la seccion de paquetes
+      const exito = document.createElement('p');
+      exito.className = 'alerta alerta-exito';
+      exito.style.marginBottom = '12px';
+      exito.textContent = 'Salida guardada: ' + fFecha(res.fecha_salida) +
+        ' → ' + fFecha(res.fecha_regreso) + ' | Cupo: ' + res.cupo_maximo;
+      const cont = document.getElementById('tabla-paquetes-admin');
+      cont.parentNode.insertBefore(exito, cont);
+      setTimeout(() => exito.remove(), 5000);
       cargarPaquetesAdmin();
     } catch (e) {
       errDiv.textContent = e.message;
@@ -848,11 +879,11 @@ function toggleFormEditarPaquete(paquete, trPaquete, tbody) {
     }
   });
 
-  td.appendChild(grid);
+  td.appendChild(fila);
   td.appendChild(errDiv);
   trF.appendChild(td);
   trPaquete.after(trF);
-  inpNombre.focus();
+  inpSalida.focus();
 }
 
 /* ─── VISTA ADMIN: reservas ─────────────────────────────────────── */
@@ -880,7 +911,7 @@ async function cargarReservasAdmin() {
       const tdEst = el('td', r.estado);
       tdEst.className = r.estado === 'ACTIVA' ? 'estado-activa' : 'estado-cancelada';
       tr.appendChild(tdEst);
-      tr.appendChild(el('td', r.fecha_emision.slice(0, 10)));
+      tr.appendChild(el('td', fFecha(r.fecha_emision.slice(0, 10))));
       tbody.appendChild(tr);
     }
     tabla.appendChild(tbody);
