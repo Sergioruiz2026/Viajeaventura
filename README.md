@@ -34,6 +34,7 @@ aplicación.
 En PowerShell, configura las credenciales del administrador para la sesión actual y ejecuta la aplicación:
 
 ```powershell
+$env:VIAJES_FERNET_KEY = "clave-generada"
 $env:VIAJES_ADMIN_USUARIO = "admin"
 $env:VIAJES_ADMIN_PASSWORD = "define-una-clave-segura"
 python main.py
@@ -81,8 +82,9 @@ python main.py
 
 Cada instalación crea su administrador inicial con las variables
 `VIAJES_ADMIN_USUARIO` y `VIAJES_ADMIN_PASSWORD`, y los clientes se registran
-desde la aplicación. La base de datos local de demostración incluye además
-estas cuentas de prueba:
+desde la aplicación. Para que una persona que clone el repositorio pueda
+entrar inmediatamente a ambos roles, al iniciar una base nueva se crean
+automáticamente estas cuentas de demostración:
 
 | Rol | Nombre | Usuario de acceso | Contraseña |
 |---|---|---|---|
@@ -92,7 +94,19 @@ estas cuentas de prueba:
 El cliente inicia sesión usando su correo y el administrador usando su
 usuario. Estas credenciales son únicamente para pruebas locales; cámbielas o
 elimínelas antes de usar datos reales. Si se utiliza otra base con
-`VIAJES_DB_PATH`, las cuentas de demostración deben registrarse nuevamente.
+`VIAJES_DB_PATH`, se crearán allí la primera vez que se inicie la aplicación.
+La creación automática se puede desactivar con
+`$env:VIAJES_DEMO_USUARIOS = "0"`.
+
+En un equipo nuevo, después de clonar el repositorio, ejecuta:
+
+```powershell
+$env:VIAJES_FERNET_KEY = "genera-y-conserva-una-clave-local"
+python main.py
+```
+
+La clave Fernet es obligatoria porque el registro del cliente cifra su RUT y
+teléfono. No se debe subir esa clave a GitHub.
 
 Los administradores se autentican con su nombre de usuario y los clientes con
 su correo.

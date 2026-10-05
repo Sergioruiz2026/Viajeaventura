@@ -38,6 +38,7 @@ from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.catalogo_servicio import CatalogoServicio
 from servicios.paquete_servicio import PaqueteServicio
 from servicios.reserva_servicio import ReservaServicio
+from seguridad.usuarios_demo import asegurar_usuarios_demo
 
 
 logger = logging.getLogger(__name__)
@@ -212,7 +213,12 @@ class _Servicios:
 def _servicios_dep():
     bd = BaseDatos()
     try:
-        yield _Servicios(bd)
+        servicios = _Servicios(bd)
+        asegurar_usuarios_demo(
+            ClienteRepositorio(bd),
+            servicios.autenticacion,
+        )
+        yield servicios
     finally:
         bd.cerrar()
 

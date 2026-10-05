@@ -34,6 +34,7 @@ from seguridad.validadores import Validador
 from seguridad.logging_config import configurar_logging, enmascarar_texto
 from repositorios.base_datos import BaseDatos
 from seguridad.enmascarado import mask_phone, mask_rut
+from seguridad.usuarios_demo import asegurar_usuarios_demo
 
 
 MENSAJE_ERROR_INESPERADO = (
@@ -509,6 +510,8 @@ def main():
         inicializar_aplicacion()
         cargar_destinos_iniciales()
         asegurar_administrador_configurado()
+        if "cliente_repo" in globals() and "auth" in globals():
+            asegurar_usuarios_demo(cliente_repo, auth)
     except RuntimeError:
         mostrar_error_configuracion()
         return
@@ -560,6 +563,8 @@ def iniciar_web(host="127.0.0.1", puerto=8000):
         inicializar_aplicacion()
         cargar_destinos_iniciales()
         asegurar_administrador_configurado()
+        if "cliente_repo" in globals() and "auth" in globals():
+            asegurar_usuarios_demo(cliente_repo, auth)
     except RuntimeError:
         mostrar_error_configuracion()
         return

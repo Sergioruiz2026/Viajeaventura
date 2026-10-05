@@ -271,3 +271,10 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se verificó que `app.db` está excluido por `.gitignore`; por ello las cuentas de prueba permanecen únicamente en el equipo donde fueron creadas. Se explicó que un clon nuevo debe registrar sus propias cuentas o conectarse a una base compartida.
 - **Archivos modificados:** `changelog.md`.
 - **Validaciones:** `git ls-files` no incluyó `app.db` y `git check-ignore` confirmó la regla `.gitignore:3:app.db`.
+
+### 2026-10-05
+
+- **Prompt:** Cómo solucionar el acceso de usuarios y administradores para que otra persona pueda entrar al clonar el repositorio.
+- **Respuesta y acciones:** Se agregó la creación automática e idempotente de las cuentas demo `cliente.demo@viajeaventura.local` y `admin-demo` al iniciar una base local nueva. Se integró en la consola y en las dependencias de la API, se agregó la opción `VIAJES_DEMO_USUARIOS=0` para desactivarla y se documentó la configuración necesaria de `VIAJES_FERNET_KEY`.
+- **Archivos modificados:** `seguridad/usuarios_demo.py`, `main.py`, `api.py`, `README.md`, `changelog.md`.
+- **Validaciones:** Base temporal nueva: inicio de sesión verificado con roles `CLIENTE` y `ADMIN`; `pytest -q`: 49 pruebas aprobadas; `git diff --check` sin errores.
