@@ -278,3 +278,10 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se agregó la creación automática e idempotente de las cuentas demo `cliente.demo@viajeaventura.local` y `admin-demo` al iniciar una base local nueva. Se integró en la consola y en las dependencias de la API, se agregó la opción `VIAJES_DEMO_USUARIOS=0` para desactivarla y se documentó la configuración necesaria de `VIAJES_FERNET_KEY`.
 - **Archivos modificados:** `seguridad/usuarios_demo.py`, `main.py`, `api.py`, `README.md`, `changelog.md`.
 - **Validaciones:** Base temporal nueva: inicio de sesión verificado con roles `CLIENTE` y `ADMIN`; `pytest -q`: 49 pruebas aprobadas; `git diff --check` sin errores.
+
+### 2026-10-05
+
+- **Prompt:** Error de Uvicorn `WinError 10048` al intentar usar el puerto 8000.
+- **Respuesta y acciones:** Se verificó que el puerto 8000 ya está ocupado por una instancia existente de Uvicorn de este proyecto (PID 8808). No se detuvo el proceso para evitar cerrar una sesión activa; se indicaron las opciones de reutilizarlo, detenerlo por PID o iniciar otro puerto.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** `Get-NetTCPConnection` y `Win32_Process` confirmaron el proceso `python.exe -m uvicorn api:app` escuchando en `127.0.0.1:8000`.
