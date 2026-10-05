@@ -257,3 +257,10 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se inició la API web local con Uvicorn en `http://127.0.0.1:8000/`.
 - **Archivos modificados:** `changelog.md`.
 - **Validaciones:** Solicitud HTTP a `/` respondió con estado 200.
+
+### 2026-10-05
+
+- **Prompt:** Crear usuarios de prueba como cliente y administrador con nombre y contraseña para ejecutar el sistema de ambas maneras.
+- **Respuesta y acciones:** Se crearon en `app.db` las cuentas `Cliente Demo` (`cliente.demo@viajeaventura.local` / `ClienteDemo1!`) y `Administrador Demo` (`admin-demo` / `AdminDemo1!`). Se documentaron las credenciales y el método de acceso en el README.
+- **Archivos modificados:** `README.md`, `changelog.md`, `app.db`.
+- **Validaciones:** Inicio de sesión verificado para ambas cuentas; el cliente quedó con rol `CLIENTE` y el administrador con rol `ADMIN`.

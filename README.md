@@ -79,9 +79,20 @@ python main.py
 
 ## Usuarios
 
-El repositorio no incluye la base de datos ni credenciales. Cada instalación
-crea su administrador inicial con las variables `VIAJES_ADMIN_USUARIO` y
-`VIAJES_ADMIN_PASSWORD`, y los clientes se registran desde la aplicación.
+Cada instalación crea su administrador inicial con las variables
+`VIAJES_ADMIN_USUARIO` y `VIAJES_ADMIN_PASSWORD`, y los clientes se registran
+desde la aplicación. La base de datos local de demostración incluye además
+estas cuentas de prueba:
+
+| Rol | Nombre | Usuario de acceso | Contraseña |
+|---|---|---|---|
+| Cliente | Cliente Demo | `cliente.demo@viajeaventura.local` | `ClienteDemo1!` |
+| Administrador | Administrador Demo | `admin-demo` | `AdminDemo1!` |
+
+El cliente inicia sesión usando su correo y el administrador usando su
+usuario. Estas credenciales son únicamente para pruebas locales; cámbielas o
+elimínelas antes de usar datos reales. Si se utiliza otra base con
+`VIAJES_DB_PATH`, las cuentas de demostración deben registrarse nuevamente.
 
 Los administradores se autentican con su nombre de usuario y los clientes con
 su correo.
