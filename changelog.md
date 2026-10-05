@@ -1,5 +1,12 @@
 # CHANGELOG
 
+### 2026-10-05
+
+- **Prompt:** Ejecutar el HTML.
+- **Respuesta y acciones:** Se abrió la interfaz web de Viajes Aventura mediante el servidor local en `http://127.0.0.1:8000/`. El puerto ya estaba ocupado por una instancia activa, por lo que no se inició una segunda instancia.
+- **Archivos modificados:** `changelog.md`
+- **Validaciones:** Se comprobó en el navegador que la página responde, muestra el título “Viajes Aventura” y presenta la pantalla de inicio de sesión.
+
 ### 2026-10-04
 
 - **Prompt:** Agregar los cambios necesarios para cumplir la rúbrica del PDF y verificar su funcionamiento.
