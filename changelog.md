@@ -264,3 +264,10 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se crearon en `app.db` las cuentas `Cliente Demo` (`cliente.demo@viajeaventura.local` / `ClienteDemo1!`) y `Administrador Demo` (`admin-demo` / `AdminDemo1!`). Se documentaron las credenciales y el método de acceso en el README.
 - **Archivos modificados:** `README.md`, `changelog.md`, `app.db`.
 - **Validaciones:** Inicio de sesión verificado para ambas cuentas; el cliente quedó con rol `CLIENTE` y el administrador con rol `ADMIN`.
+
+### 2026-10-05
+
+- **Prompt:** Consultar si los usuarios de prueba se pueden abrir desde otro PC al clonar el repositorio o desde GitHub.
+- **Respuesta y acciones:** Se verificó que `app.db` está excluido por `.gitignore`; por ello las cuentas de prueba permanecen únicamente en el equipo donde fueron creadas. Se explicó que un clon nuevo debe registrar sus propias cuentas o conectarse a una base compartida.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** `git ls-files` no incluyó `app.db` y `git check-ignore` confirmó la regla `.gitignore:3:app.db`.
