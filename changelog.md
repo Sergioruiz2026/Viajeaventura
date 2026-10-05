@@ -320,3 +320,24 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se crearon solo las dos cuentas ausentes en `app.db` mediante la capa de persistencia y el servicio de registro del proyecto; ambas contraseñas quedaron como hashes Argon2id. Una prueba de expiración detectó que el manejador global descartaba la cabecera de limpieza de cookie en respuestas 401; se corrigió su propagación. Se detectó que el modo de escucha LAN abría `0.0.0.0` en el navegador local; ahora abre `127.0.0.1` mientras Uvicorn sigue escuchando en `0.0.0.0`. Se añadieron regresiones para ambas incidencias.
 - **Archivos modificados:** `api.py`, `main.py`, `tests/test_autenticacion_multi_dispositivo.py`, `tests/test_presentacion.py`, `app.db`, `changelog.md`.
 - **Validaciones:** `pytest -q`: 58 pruebas y 14 subtests aprobados; un warning de deprecación de Starlette/httpx. Verificación API contra `app.db`: una fila por cuenta, IDs válidos, roles correctos, hashes Argon2id verificables, cuentas sin bloqueo; login ADMIN/CLIENTE, rutas autorizadas/rechazadas, sesión copiada a un cliente nuevo, logout y credenciales incorrectas. Pruebas browser SPA en Uvicorn local: carga HTML HTTP 200, panel ADMIN y CLIENTE correctos, recarga preserva sesión, logout/cambio de usuario, mensaje de error de login; LocalStorage y SessionStorage vacíos. Cookie inválida/vencida limpia cookie y sesión DB; Secure en HTTPS simulado. Pylance sin errores y `git diff --check` limpio. Multi-PC físico no verificable desde este equipo; debe probarse desde otro equipo de la misma LAN con `http://IP_DEL_SERVIDOR:8000/`.
+
+### 2026-10-05 {#2026-10-05}
+
+- **Prompt:** Dame el admin prueba y contraseña.
+- **Respuesta y acciones:** Se facilitaron las credenciales del administrador de prueba ya solicitadas previamente.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Ninguna.
+
+### 2026-10-05 {#2026-10-05}
+
+- **Prompt:** Este admin de prueba y cliente de prueba guárdalos para intentarlo desde otro PC.
+- **Respuesta y acciones:** Se confirmó que ambas cuentas de prueba ya estaban guardadas una sola vez en `app.db` con sus roles correspondientes y contraseñas Argon2id. Sin interrumpir el servidor existente en 8000 (que escucha solo en loopback), se inició la misma API y base en `0.0.0.0:8001` para probar desde la red local.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Hashes comprobaron las credenciales; login/logout y rol cliente pasaron contra `app.db`; cuentas persisten con IDs válidos y sin bloqueo. Interfaz respondió HTTP 200 tanto en loopback como en `10.22.49.160:8001`; listener confirmado en `0.0.0.0:8001`. Conexión desde un segundo PC no comprobada.
+
+### 2026-10-05 {#2026-10-05}
+
+- **Prompt:** Funcionó correctamente en otro PC con el HTTP proporcionado; guardar y no cambiar nada más, solo verificar que funcione.
+- **Respuesta y acciones:** Se conservó la aplicación, configuración y base de datos sin cambios. Se registró la confirmación del usuario de que el acceso desde otro PC funcionó.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** `http://10.22.49.160:8001/` respondió HTTP 200 y mostró el título de la aplicación; Uvicorn continúa escuchando en `0.0.0.0:8001`.
