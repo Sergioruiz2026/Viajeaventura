@@ -11,6 +11,33 @@ PASSWORD_DEMO_CLIENTE = "ClienteDemo1!"
 USUARIO_DEMO_ADMIN = "admin-demo"
 PASSWORD_DEMO_ADMIN = "AdminDemo1!"
 
+_CUERPO_RUT_DEMO_INICIAL = 12_345_678
+
+
+def _digito_verificador_rut(cuerpo):
+    suma = sum(
+        int(digito) * (indice % 6 + 2)
+        for indice, digito in enumerate(reversed(str(cuerpo)))
+    )
+    resultado = 11 - suma % 11
+    return (
+        "0" if resultado == 11 else "K" if resultado == 10 else str(resultado)
+    )
+
+
+def _rut_demo_disponible(cliente_repo):
+    rangos = (
+        (_CUERPO_RUT_DEMO_INICIAL, 100_000_000),
+        (10_000_000, _CUERPO_RUT_DEMO_INICIAL),
+    )
+    for inicio, limite in rangos:
+        for cuerpo in range(inicio, limite):
+            cuerpo_formateado = f"{cuerpo:,}".replace(",", ".")
+            rut = f"{cuerpo_formateado}-{_digito_verificador_rut(cuerpo)}"
+            if cliente_repo.buscar_por_rut(rut) is None:
+                return rut
+    raise RuntimeError("No hay un RUT disponible para la cuenta de demostración.")
+
 
 def asegurar_usuarios_demo(cliente_repo, autenticacion):
     """Crea las cuentas públicas de demo sin modificar cuentas existentes."""
@@ -24,7 +51,7 @@ def asegurar_usuarios_demo(cliente_repo, autenticacion):
     if cliente_repo.buscar_por_correo(USUARIO_DEMO_CLIENTE) is None:
         autenticacion.registrar_cliente(
             "Cliente Demo",
-            "12.345.678-5",
+            _rut_demo_disponible(cliente_repo),
             USUARIO_DEMO_CLIENTE,
             "+56987654321",
             PASSWORD_DEMO_CLIENTE,

@@ -292,3 +292,10 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 - **Respuesta y acciones:** Se verificó que el puerto 8000 ya está ocupado por una instancia existente de Uvicorn de este proyecto (PID 8808). No se detuvo el proceso para evitar cerrar una sesión activa; se indicaron las opciones de reutilizarlo, detenerlo por PID o iniciar otro puerto.
 - **Archivos modificados:** `changelog.md`.
 - **Validaciones:** `Get-NetTCPConnection` y `Win32_Process` confirmaron el proceso `python.exe -m uvicorn api:app` escuchando en `127.0.0.1:8000`.
+
+### 2026-10-05
+
+- **Prompt:** Al elegir “1. Interfaz web (navegador)”, aparece “Ocurrió un error inesperado al procesar su solicitud. Por favor intente nuevamente.”
+- **Respuesta y acciones:** La traza de `app.log` confirmó que el RUT fijo de la cuenta demo ya estaba registrado y bloqueaba el inicio web. La cuenta demo ahora busca un RUT válido disponible al detectar una colisión, manteniendo el RUT original cuando está libre.
+- **Archivos modificados:** `seguridad/usuarios_demo.py`, `tests/test_usuarios_demo.py`, `changelog.md`.
+- **Validaciones:** Se reprodujo el fallo con una prueba de colisión antes de corregirlo; `pytest -q`: 51 pruebas aprobadas y 14 subtests aprobados; Pylance: sin errores ni errores de sintaxis en los archivos Python modificados.
