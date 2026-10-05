@@ -27,8 +27,8 @@ Se consultó directamente `app.db` y se listaron los 4 usuarios existentes:
 
 | ID | Rol     | Nombre        | Correo / Usuario      |
 |----|---------|---------------|-----------------------|
-| 1  | CLIENTE | Sergio Ruiz   | ruiz.2006@hotmail.com |
-| 2  | CLIENTE | Loreto        | loreto@gmail.com      |
+| 1  | CLIENTE | Sergio Ruiz   | (correo omitido) |
+| 2  | CLIENTE | Loreto        | (correo omitido)      |
 | 3  | ADMIN   | Administrador | admin                 |
 | 4  | ADMIN   | Administrador | SergioR               |
 
