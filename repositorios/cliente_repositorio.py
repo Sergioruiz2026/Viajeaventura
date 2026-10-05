@@ -79,6 +79,13 @@ class ClienteRepositorio:
         ).fetchone()
         return self.__desde_fila(fila) if fila else None
 
+    def buscar_por_id(self, usuario_id):
+        fila = self.__conexion.execute(
+            "SELECT * FROM usuarios WHERE id = ?",
+            (usuario_id,)
+        ).fetchone()
+        return self.__desde_fila(fila) if fila else None
+
     def esta_bloqueado(self, correo, ahora):
         with self.__base_datos.transaccion() as conexion:
             fila = conexion.execute(

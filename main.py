@@ -587,7 +587,8 @@ def iniciar_web(host="127.0.0.1", puerto=8000):
     import uvicorn
     from api import app
 
-    url = f"http://{host}:{puerto}/"
+    host_navegador = "127.0.0.1" if host == "0.0.0.0" else host
+    url = f"http://{host_navegador}:{puerto}/"
     threading.Timer(1.5, webbrowser.open, args=(url,)).start()
     print(f"Abriendo {url}  (Ctrl+C para detener el servidor)")
     uvicorn.run(app, host=host, port=puerto)

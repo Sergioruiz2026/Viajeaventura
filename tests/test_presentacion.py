@@ -1,6 +1,8 @@
 import io
 import unittest
+import os
 from contextlib import redirect_stdout
+from unittest.mock import Mock
 from unittest.mock import patch
 
 import main
@@ -55,6 +57,32 @@ class PresentacionConsolaTests(unittest.TestCase):
         traza = registrar_error.call_args.args[1]
         self.assertIn("Traceback (most recent call last)", traza)
         self.assertIn("RuntimeError: detalle técnico interno", traza)
+
+    def test_inicio_web_en_todas_las_interfaces_abre_loopback_local(self):
+        base_datos = Mock()
+        salida = io.StringIO()
+        with (
+            patch.dict(os.environ, {"VIAJES_FERNET_KEY": "clave-de-prueba"}),
+            patch.object(main, "cargar_configuracion_entorno_usuario"),
+            patch.object(main, "configurar_logging"),
+            patch.object(main, "inicializar_aplicacion"),
+            patch.object(main, "cargar_destinos_iniciales"),
+            patch.object(main, "asegurar_administrador_configurado"),
+            patch.object(main, "base_datos", base_datos, create=True),
+            patch("threading.Timer") as timer,
+            patch("uvicorn.run") as run_server,
+            redirect_stdout(salida),
+        ):
+            main.iniciar_web(host="0.0.0.0", puerto=8765)
+
+        timer.assert_called_once()
+        self.assertEqual(
+            timer.call_args.kwargs["args"],
+            ("http://127.0.0.1:8765/",),
+        )
+        run_server.assert_called_once()
+        self.assertEqual(run_server.call_args.kwargs["host"], "0.0.0.0")
+        self.assertEqual(run_server.call_args.kwargs["port"], 8765)
 
 
 if __name__ == "__main__":

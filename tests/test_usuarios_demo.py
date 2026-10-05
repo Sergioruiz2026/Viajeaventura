@@ -56,3 +56,14 @@ def test_cuenta_demo_conserva_el_rut_original_si_esta_disponible(monkeypatch):
     asegurar_usuarios_demo(repositorio, autenticacion)
 
     assert autenticacion.registros[0][1] == "12.345.678-5"
+
+
+def test_cuentas_demo_no_se_crean_por_defecto(monkeypatch):
+    monkeypatch.delenv("VIAJES_DEMO_USUARIOS", raising=False)
+    repositorio = RepositorioDemo(set())
+    autenticacion = AutenticacionDemo(repositorio)
+
+    asegurar_usuarios_demo(repositorio, autenticacion)
+
+    assert autenticacion.registros == []
+    assert repositorio.administradores == []

@@ -10,6 +10,10 @@ from modelos.sesion import Sesion
 from seguridad.normalizador import capitalizar_titulo
 from seguridad.validadores import Validador
 from seguridad.contraseñas import GestorContrasenas
+from seguridad.usuarios_demo import (
+    es_usuario_demo,
+    usuarios_demo_habilitados,
+)
 
 from excepciones import (
     AutenticacionError,
@@ -35,6 +39,10 @@ class AutenticacionServicio:
         telefono,
         password
     ):
+        if es_usuario_demo(correo) and not usuarios_demo_habilitados():
+            raise CorreoDuplicadoError(
+                "El correo no está disponible para el registro."
+            )
         nombre = capitalizar_titulo(nombre)
         Validador.validar_nombre(nombre)
         Validador.validar_rut(rut)
@@ -58,6 +66,9 @@ class AutenticacionServicio:
 
     def iniciar_sesion(self, correo, password, *, ahora=None):
         ahora = ahora or datetime.now()
+        if es_usuario_demo(correo) and not usuarios_demo_habilitados():
+            GestorContrasenas.verificar(password, _HASH_SEÑUELO)
+            raise AutenticacionError("Correo o contraseña incorrectos.")
         cliente = self.__cliente_repo.buscar_por_correo(correo)
         if cliente is None:
             GestorContrasenas.verificar(password, _HASH_SEÑUELO)
@@ -89,6 +100,8 @@ class AutenticacionServicio:
             raise ValidacionError("El usuario administrador es obligatorio.")
         Validador.validar_contrasena(password)
         usuario = usuario.strip()
+        if es_usuario_demo(usuario) and not usuarios_demo_habilitados():
+            raise ValidacionError("El usuario administrador no está disponible.")
         if self.__cliente_repo.buscar_por_correo(usuario):
             raise CorreoDuplicadoError(
                 "Ya existe un usuario con ese nombre."
@@ -109,6 +122,11 @@ class AutenticacionServicio:
             )
         if not isinstance(nuevo_usuario, str) or not nuevo_usuario.strip():
             raise ValidacionError("El usuario administrador es obligatorio.")
+        if (
+            es_usuario_demo(nuevo_usuario.strip())
+            and not usuarios_demo_habilitados()
+        ):
+            raise ValidacionError("El usuario administrador no está disponible.")
         Validador.validar_contrasena(nueva_password)
         self.__cliente_repo.actualizar_credenciales_administrador(
             sesion.correo,

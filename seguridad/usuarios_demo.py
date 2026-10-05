@@ -12,6 +12,23 @@ USUARIO_DEMO_ADMIN = "admin-demo"
 PASSWORD_DEMO_ADMIN = "AdminDemo1!"
 
 _CUERPO_RUT_DEMO_INICIAL = 12_345_678
+_USUARIOS_DEMO = frozenset({
+    USUARIO_DEMO_CLIENTE.casefold(),
+    USUARIO_DEMO_ADMIN.casefold(),
+})
+
+
+def usuarios_demo_habilitados():
+    return os.environ.get("VIAJES_DEMO_USUARIOS", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "si",
+    }
+
+
+def es_usuario_demo(usuario):
+    return isinstance(usuario, str) and usuario.casefold() in _USUARIOS_DEMO
 
 
 def _digito_verificador_rut(cuerpo):
@@ -41,11 +58,7 @@ def _rut_demo_disponible(cliente_repo):
 
 def asegurar_usuarios_demo(cliente_repo, autenticacion):
     """Crea las cuentas públicas de demo sin modificar cuentas existentes."""
-    if os.environ.get("VIAJES_DEMO_USUARIOS", "1").strip().lower() in {
-        "0",
-        "false",
-        "no",
-    }:
+    if not usuarios_demo_habilitados():
         return
 
     if cliente_repo.buscar_por_correo(USUARIO_DEMO_CLIENTE) is None:

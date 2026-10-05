@@ -332,6 +332,16 @@ class BaseDatos:
                 bloqueado_hasta TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS sesiones (
+                token_hash TEXT PRIMARY KEY,
+                usuario_id INTEGER NOT NULL REFERENCES usuarios(id)
+                    ON DELETE CASCADE,
+                ultima_actividad TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS sesiones_usuario
+                ON sesiones(usuario_id);
+
             CREATE TABLE IF NOT EXISTS reservas (
                 id INTEGER PRIMARY KEY,
                 usuario_id INTEGER NOT NULL REFERENCES usuarios(id)

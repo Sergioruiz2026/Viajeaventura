@@ -1,9 +1,10 @@
 """API HTTP para el registro de clientes y gestión web."""
 
+import hashlib
+import logging
 import os
 import secrets
-import logging
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, status
@@ -32,13 +33,18 @@ from repositorios.destino_repositorio import DestinoRepositorio
 from repositorios.paquete_repositorio import PaqueteRepositorio
 from repositorios.reserva_repositorio import ReservaRepositorio
 from repositorios.salida_repositorio import SalidaRepositorio
+from repositorios.sesion_repositorio import SesionRepositorio
 from seguridad.logging_config import enmascarar_texto
 from seguridad.logging_config import configurar_logging
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.catalogo_servicio import CatalogoServicio
 from servicios.paquete_servicio import PaqueteServicio
 from servicios.reserva_servicio import ReservaServicio
-from seguridad.usuarios_demo import asegurar_usuarios_demo
+from seguridad.usuarios_demo import (
+    asegurar_usuarios_demo,
+    es_usuario_demo,
+    usuarios_demo_habilitados,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -112,10 +118,37 @@ class ActualizarPaqueteRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Almacén de sesiones en memoria
+# Configuración de sesiones
 # ---------------------------------------------------------------------------
 
-_sesiones: dict[str, Sesion] = {}
+_DURACION_COOKIE_SESION = 1800
+
+
+def _cookie_secure() -> bool:
+    return os.environ.get("VIAJES_COOKIE_SECURE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "si",
+    }
+
+
+def _hash_token_sesion(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _rechazar_sesion(response: Response, detalle: str) -> None:
+    response.delete_cookie(
+        "session",
+        httponly=True,
+        samesite="strict",
+        secure=_cookie_secure(),
+    )
+    raise HTTPException(
+        status_code=401,
+        detail=detalle,
+        headers={"Set-Cookie": response.headers["set-cookie"]},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -199,15 +232,16 @@ class _Servicios:
     def __init__(self, base_datos: BaseDatos):
         destino_repo = DestinoRepositorio(base_datos)
         paquete_repo = PaqueteRepositorio(base_datos)
-        cliente_repo = ClienteRepositorio(base_datos)
+        self.clientes = ClienteRepositorio(base_datos)
         reserva_repo = ReservaRepositorio(base_datos)
         salida_repo  = SalidaRepositorio(base_datos)
-        self.autenticacion = AutenticacionServicio(cliente_repo)
+        self.autenticacion = AutenticacionServicio(self.clientes)
         self.catalogo = CatalogoServicio(destino_repo)
         self.paquetes = PaqueteServicio(paquete_repo, destino_repo, salida_repo)
         self.reservas = ReservaServicio(reserva_repo, paquete_repo, salida_repo)
         self.salidas  = salida_repo
         self.paquete_repo = paquete_repo
+        self.sesiones = SesionRepositorio(base_datos)
 
 
 def _servicios_dep():
@@ -223,15 +257,45 @@ def _servicios_dep():
         bd.cerrar()
 
 
-def _obtener_sesion(session: str | None = Cookie(default=None)) -> Sesion:
-    if not session or session not in _sesiones:
+def _obtener_sesion(
+    response: Response,
+    session: str | None = Cookie(default=None),
+    svcs: _Servicios = Depends(_servicios_dep),
+) -> Sesion:
+    if not session:
         raise HTTPException(status_code=401, detail="No autenticado.")
+
+    token_hash = _hash_token_sesion(session)
+    datos_sesion = svcs.sesiones.buscar(token_hash)
+    if datos_sesion is None:
+        _rechazar_sesion(response, "No autenticado.")
+
+    usuario_id, ultima_actividad = datos_sesion
+    usuario = svcs.clientes.buscar_por_id(usuario_id)
+    if usuario is None or (
+        es_usuario_demo(usuario.correo) and not usuarios_demo_habilitados()
+    ):
+        svcs.sesiones.eliminar(token_hash)
+        _rechazar_sesion(response, "No autenticado.")
+
+    sesion = Sesion(usuario, ahora=ultima_actividad)
+    ahora = datetime.now()
     try:
-        _sesiones[session].renovar()
+        sesion.renovar(ahora)
     except SesionExpiradaError:
-        _sesiones.pop(session, None)
-        raise HTTPException(status_code=401, detail="Sesión expirada.")
-    return _sesiones[session]
+        svcs.sesiones.eliminar(token_hash)
+        _rechazar_sesion(response, "Sesión expirada.")
+
+    svcs.sesiones.actualizar_actividad(token_hash, ahora)
+    response.set_cookie(
+        key="session",
+        value=session,
+        httponly=True,
+        samesite="strict",
+        secure=_cookie_secure(),
+        max_age=_DURACION_COOKIE_SESION,
+    )
+    return sesion
 
 
 def _verificar_csrf(request: Request) -> None:
@@ -320,14 +384,19 @@ def crear_app(servicio=None):
             sesion = svcs.autenticacion.iniciar_sesion(datos.usuario, datos.password)
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e
-        token = secrets.token_hex(32)
-        _sesiones[token] = sesion
+        token = secrets.token_urlsafe(32)
+        svcs.sesiones.crear(
+            _hash_token_sesion(token),
+            sesion.usuario.id,
+            datetime.now(),
+        )
         response.set_cookie(
             key="session",
             value=token,
             httponly=True,
             samesite="strict",
-            max_age=1800,
+            secure=_cookie_secure(),
+            max_age=_DURACION_COOKIE_SESION,
         )
         return {"nombre": sesion.nombre, "rol": sesion.rol}
 
@@ -336,10 +405,16 @@ def crear_app(servicio=None):
         response: Response,
         _: None = Depends(_verificar_csrf),
         session: str | None = Cookie(default=None),
+        svcs: _Servicios = Depends(_servicios_dep),
     ):
         if session:
-            _sesiones.pop(session, None)
-        response.delete_cookie("session")
+            svcs.sesiones.eliminar(_hash_token_sesion(session))
+        response.delete_cookie(
+            "session",
+            httponly=True,
+            samesite="strict",
+            secure=_cookie_secure(),
+        )
         return {"mensaje": "Sesión cerrada."}
 
     @app.get("/api/yo")

@@ -52,6 +52,22 @@ menú ADMIN, donde se deben definir sus fechas y cupo.
 También se solicita el margen de operación como porcentaje; si se deja vacío,
 se aplica el valor predeterminado de 20 %.
 
+## Autenticación compartida entre equipos
+
+El registro y el login se procesan en el backend. El correo/usuario, el rol y
+el hash Argon2id de la contraseña se guardan en la base SQLite del servidor;
+el navegador no guarda usuarios, contraseñas ni roles. La cookie `session`
+solo contiene un token opaco `HttpOnly`, y el servidor guarda únicamente su
+hash junto al usuario y la última actividad. La sesión se renueva mientras se
+usa y vence tras 30 minutos de inactividad; logout la invalida en la base.
+
+Para que distintos PCs compartan cuentas, **todos deben abrir la misma
+instancia del backend** y, por tanto, la misma base de datos del equipo
+servidor. No inicies una copia independiente de `main.py` en cada PC: cada
+copia local tendría su propio `app.db` y sus propios usuarios. El archivo
+SQLite debe permanecer en el disco local del servidor; no lo compartas como
+archivo por una carpeta de red ni lo copies a cada equipo.
+
 Un paquete puede tener varias salidas. Al agregar una nueva fecha desde la
 interfaz web, la salida anterior se conserva con sus propias fechas y cupo;
 cada salida mantiene sus reservas y disponibilidad de forma independiente.
@@ -82,9 +98,10 @@ python main.py
 
 Cada instalación crea su administrador inicial con las variables
 `VIAJES_ADMIN_USUARIO` y `VIAJES_ADMIN_PASSWORD`, y los clientes se registran
-desde la aplicación. Para que una persona que clone el repositorio pueda
-entrar inmediatamente a ambos roles, al iniciar una base nueva se crean
-automáticamente estas cuentas de demostración:
+desde la aplicación. Las cuentas de demostración no se crean por defecto. Para
+habilitarlas únicamente en una instalación local de prueba, define
+`VIAJES_DEMO_USUARIOS=1` antes de iniciar; se crearán y podrán usar estas
+cuentas:
 
 | Rol | Nombre | Usuario de acceso | Contraseña |
 |---|---|---|---|
@@ -94,9 +111,13 @@ automáticamente estas cuentas de demostración:
 El cliente inicia sesión usando su correo y el administrador usando su
 usuario. Estas credenciales son únicamente para pruebas locales; cámbielas o
 elimínelas antes de usar datos reales. Si se utiliza otra base con
-`VIAJES_DB_PATH`, se crearán allí la primera vez que se inicie la aplicación.
-La creación automática se puede desactivar con
-`$env:VIAJES_DEMO_USUARIOS = "0"`.
+`VIAJES_DB_PATH`, se crearán allí si se habilitan las cuentas demo.
+La creación automática solo se habilita con
+`$env:VIAJES_DEMO_USUARIOS = "1"`.
+Desactivar la creación no elimina cuentas demo que ya existan en una base:
+el login con esos nombres queda bloqueado mientras la opción esté desactivada.
+Antes de exponer una base existente, cambia o elimina esas credenciales desde
+una sesión ADMIN.
 
 En un equipo nuevo, después de clonar el repositorio, ejecuta:
 
@@ -111,9 +132,14 @@ teléfono. No se debe subir esa clave a GitHub.
 ### Acceso desde otro PC de la misma red
 
 Por defecto, la aplicación escucha solo en el equipo local (`127.0.0.1`).
-Para que otro PC pueda abrirla, inicia el servidor en todas las interfaces:
+Ese valor es adecuado para desarrollo local, pero no acepta conexiones desde
+otros equipos. Para compartir la misma cuenta/base de datos, inicia **una sola
+instancia** en el PC servidor, en todas las interfaces:
 
 ```powershell
+$env:VIAJES_FERNET_KEY = "clave-estable-del-servidor"
+$env:VIAJES_DEMO_USUARIOS = "0"
+$env:VIAJES_COOKIE_SECURE = "0"
 python main.py --web --host 0.0.0.0 --puerto 8000
 ```
 
@@ -131,6 +157,11 @@ ipconfig
 
 Desde el otro PC abre `http://IP_DEL_SERVIDOR:8000/`, por ejemplo
 `http://192.168.1.25:8000/`. Ambos equipos deben estar en la misma red.
+Cada PC cliente debe abrir esa dirección en el navegador, registrarse o
+iniciar sesión ahí; no debe ejecutar una copia local. La interfaz usa rutas
+relativas (`/api/...`), así que navegador y API comparten origen y no requieren
+configuración CORS adicional. `localhost` y `127.0.0.1` desde el PC cliente
+apuntan al propio cliente, no al servidor.
 Si Windows Firewall solicita permiso, permite Python/Uvicorn en redes
 privadas. Si el puerto sigue bloqueado, crea una regla como administrador:
 
@@ -142,6 +173,14 @@ No uses `http://127.0.0.1:8000/` desde el segundo PC: esa dirección siempre
 apunta al propio segundo PC. El proceso anterior debe detenerse y reiniciarse
 con `--host 0.0.0.0`; cambiar solo la URL del navegador no modifica dónde
 escucha el servidor.
+
+Para que equipos fuera de la red local accedan desde cualquier lugar, hace
+falta desplegar el backend en un servidor accesible por Internet y configurar
+DNS, firewall y HTTPS. No basta con cambiar `localhost` por una URL en el
+frontend. Cuando el sitio se sirva por HTTPS, configura
+`VIAJES_COOKIE_SECURE=1` en el backend; en desarrollo HTTP local/LAN déjalo en
+`0`. Mantén `VIAJES_FERNET_KEY` estable en el servidor y restringida a ese
+backend.
 
 Los administradores se autentican con su nombre de usuario y los clientes con
 su correo.
