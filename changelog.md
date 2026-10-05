@@ -1,5 +1,12 @@
 # CHANGELOG
 
+### 2026-10-04
+
+- **Prompt:** Agregar los cambios necesarios para cumplir la rúbrica del PDF y verificar su funcionamiento.
+- **Respuesta y acciones:** Se incorporó la jerarquía `Usuario`/`Cliente`/`Administrador`, hash señuelo para evitar enumeración de usuarios, política de contraseñas de 10 a 128 caracteres, logging de errores internos de API, redirección del frontend al expirar la sesión y trazabilidad actualizada.
+- **Archivos modificados:** `modelos/usuario.py`, `modelos/cliente.py`, `modelos/administrador.py`, `repositorios/cliente_repositorio.py`, `servicios/autenticacion_servicio.py`, `seguridad/validadores.py`, `api.py`, `main.py`, `web/index.html`, `tests/test_rubrica.py`, `README.md`, `trazabilidad_rubrica.md`.
+- **Validaciones:** `py -3 -m pytest -q tests/test_rubrica.py` — 3 pruebas aprobadas; validaciones específicas de seguridad — 23 pruebas aprobadas y 3 subtests; sin diagnósticos en archivos modificados.
+
 ## [2026-10-03]
 
 ### Revisión y corrección de scripts para compilación óptima

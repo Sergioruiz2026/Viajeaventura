@@ -5,7 +5,7 @@ from datetime import date
 from modelos.reserva import Reserva
 
 from excepciones import ReservaNoPermitidaError, ValidacionError
-from seguridad.autorizacion import exigir_rol
+from seguridad.autorizacion import exigir_permiso_reserva, exigir_rol
 
 
 class ReservaServicio:
@@ -17,7 +17,7 @@ class ReservaServicio:
 
     def crear_reserva(self, sesion, paquete_id, cantidad_personas,
                       salida_id=None):
-        exigir_rol(sesion, "CLIENTE")
+        exigir_permiso_reserva(sesion)
         if (
             isinstance(cantidad_personas, bool)
             or not isinstance(cantidad_personas, int)

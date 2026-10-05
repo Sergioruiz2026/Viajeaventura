@@ -2,6 +2,7 @@
 
 import os
 import secrets
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -32,10 +33,14 @@ from repositorios.paquete_repositorio import PaqueteRepositorio
 from repositorios.reserva_repositorio import ReservaRepositorio
 from repositorios.salida_repositorio import SalidaRepositorio
 from seguridad.logging_config import enmascarar_texto
+from seguridad.logging_config import configurar_logging
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.catalogo_servicio import CatalogoServicio
 from servicios.paquete_servicio import PaqueteServicio
 from servicios.reserva_servicio import ReservaServicio
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +66,10 @@ class DestinoRequest(BaseModel):
     descripcion: str
     duracion_dias: int
     costo_base: Decimal
+
+
+class ActualizarDestinoRequest(DestinoRequest):
+    pass
 
 
 class PaqueteRequest(BaseModel):
@@ -130,7 +139,12 @@ def _serializar_paquete(p, salidas=None) -> dict:
         "fecha_salida": p.fecha_salida.isoformat(),
         "fecha_regreso": p.fecha_regreso.isoformat(),
         "cupo_maximo": p.cupo_maximo,
+        "cupo_usado": p.cupo_reservado_activo,
         "cupo_disponible": p.cupo_disponible,
+        "destinos": [
+            {"nombre": destino.nombre, "zona": destino.zona}
+            for destino in p.destinos
+        ],
         "margen_operacion": float(p.margen_operacion),
         "estado": p.estado,
     }
@@ -139,8 +153,8 @@ def _serializar_paquete(p, salidas=None) -> dict:
     return paquete
 
 
-def _serializar_salida(salida) -> dict:
-    return {
+def _serializar_salida(salida, destinos=None) -> dict:
+    respuesta = {
         "id": salida.id,
         "paquete_id": salida.paquete_id,
         "nombre": salida.paquete_nombre,
@@ -148,9 +162,16 @@ def _serializar_salida(salida) -> dict:
         "fecha_salida": salida.fecha_salida.isoformat(),
         "fecha_regreso": salida.fecha_regreso.isoformat(),
         "cupo_maximo": salida.cupo_maximo,
+        "cupo_usado": salida.cupo_maximo - salida.cupo_disponible,
         "cupo_disponible": salida.cupo_disponible,
         "estado": "Vigente",
     }
+    if destinos is not None:
+        respuesta["destinos"] = [
+            {"nombre": destino.nombre, "zona": destino.zona}
+            for destino in destinos
+        ]
+    return respuesta
 
 
 def _exc_a_http(error: ViajesAventuraError) -> HTTPException:
@@ -185,6 +206,7 @@ class _Servicios:
         self.paquetes = PaqueteServicio(paquete_repo, destino_repo, salida_repo)
         self.reservas = ReservaServicio(reserva_repo, paquete_repo, salida_repo)
         self.salidas  = salida_repo
+        self.paquete_repo = paquete_repo
 
 
 def _servicios_dep():
@@ -216,6 +238,7 @@ def _verificar_csrf(request: Request) -> None:
 # ---------------------------------------------------------------------------
 
 def crear_app(servicio=None):
+    configurar_logging()
     app = FastAPI()
 
     if servicio is not None:
@@ -244,6 +267,20 @@ def crear_app(servicio=None):
             status_code=error.status_code,
             content={"detail": jsonable_encoder(_sanitizar_detalle(error.detail))},
             headers=error.headers,
+        )
+
+    @app.exception_handler(Exception)
+    async def error_interno(request: Request, error: Exception):
+        logger.exception(
+            "Error interno en %s %s",
+            request.method,
+            request.url.path,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Ocurrió un error inesperado. Intenta nuevamente."
+            },
         )
 
     # --- endpoint legado ------------------------------------------------ #
@@ -343,6 +380,38 @@ def crear_app(servicio=None):
             raise _exc_a_http(e) from e
         return {"nombre": d.nombre, "zona": d.zona}
 
+    @app.patch("/api/destinos/{nombre_actual}")
+    def actualizar_destino(
+        nombre_actual: str,
+        datos: ActualizarDestinoRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            destino = svcs.catalogo.modificar_destino(
+                nombre_actual, datos.nombre, datos.zona, datos.descripcion,
+                datos.duracion_dias, datos.costo_base, sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"nombre": destino.nombre, "zona": destino.zona}
+
+    @app.delete("/api/destinos/{nombre}")
+    def eliminar_destino(
+        nombre: str,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            eliminado = svcs.catalogo.eliminar_destino(nombre, sesion=sesion)
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        if not eliminado:
+            raise HTTPException(status_code=404, detail="El destino no existe.")
+        return {"mensaje": "Destino eliminado o marcado como no disponible."}
+
     # --- paquetes -------------------------------------------------------- #
 
     @app.get("/api/paquetes")
@@ -364,7 +433,13 @@ def crear_app(servicio=None):
                 ]
             else:
                 lista = svcs.paquetes.listar_vigentes(sesion=sesion)
-                respuesta = [_serializar_salida(salida) for salida in lista]
+                respuesta = [
+                    _serializar_salida(
+                        salida,
+                        svcs.paquete_repo.buscar_por_id(salida.paquete_id).destinos,
+                    )
+                    for salida in lista
+                ]
         except ViajesAventuraError as e:
             raise _exc_a_http(e) from e
         return respuesta
@@ -456,13 +531,17 @@ def crear_app(servicio=None):
         svcs: _Servicios = Depends(_servicios_dep),
     ):
         try:
+            if datos.margen_operacion is not None:
+                raise ValidacionError(
+                    "El precio de un paquete publicado no se puede modificar."
+                )
             p = svcs.paquetes.actualizar_paquete(
                 paquete_id,
                 nombre=datos.nombre,
                 fecha_salida=datos.fecha_salida,
                 fecha_regreso=datos.fecha_regreso,
                 cupo_maximo=datos.cupo_maximo,
-                margen_operacion=datos.margen_operacion,
+                margen_operacion=None,
                 sesion=sesion,
             )
         except ViajesAventuraError as e:
@@ -490,6 +569,23 @@ def crear_app(servicio=None):
             raise _exc_a_http(e) from e
         return {"nombre": p.nombre, "precio_por_persona": int(p.precio_por_persona)}
 
+    @app.post("/api/paquetes/previsualizar")
+    def previsualizar_paquete(
+        datos: PaqueteRequest,
+        _: None = Depends(_verificar_csrf),
+        sesion: Sesion = Depends(_obtener_sesion),
+        svcs: _Servicios = Depends(_servicios_dep),
+    ):
+        try:
+            precio = svcs.paquetes.previsualizar_paquete(
+                datos.nombre, datos.destinos, datos.fecha_salida,
+                datos.fecha_regreso, datos.cupo_maximo,
+                margen_operacion=datos.margen_operacion, sesion=sesion,
+            )
+        except ViajesAventuraError as e:
+            raise _exc_a_http(e) from e
+        return {"precio_por_persona": int(precio)}
+
     # --- reservas -------------------------------------------------------- #
 
     @app.get("/api/reservas")
@@ -511,6 +607,9 @@ def crear_app(servicio=None):
                 "cantidad_personas": r.cantidad_personas,
                 "total": int(r.total),
                 "estado": r.estado,
+                "fecha_salida": (
+                    r.salida_fecha_salida or r.paquete.fecha_salida
+                ).isoformat(),
                 "fecha_emision": r.fecha_emision.isoformat(),
             }
             for r in lista

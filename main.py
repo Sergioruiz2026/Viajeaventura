@@ -20,6 +20,7 @@ from servicios.paquete_servicio import PaqueteServicio
 from servicios.autenticacion_servicio import AutenticacionServicio
 from servicios.reserva_servicio import ReservaServicio
 from modelos.cliente import Cliente
+from modelos.administrador import Administrador
 from modelos.destino import Destino
 from seguridad.contraseñas import GestorContrasenas
 
@@ -486,13 +487,10 @@ def asegurar_administrador_configurado():
         return
     if ADMIN_PASSWORD is None:
         return
-    cliente_repo.agregar(Cliente(
-        "Administrador",
-        "",
+    cliente_repo.agregar(Administrador(
         ADMIN_USUARIO,
-        "",
         GestorContrasenas.generar_hash(ADMIN_PASSWORD),
-        "ADMIN"
+        nombre="Administrador",
     ))
 
 

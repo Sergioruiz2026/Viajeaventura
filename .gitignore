@@ -2,3 +2,5 @@ viajes_aventura.db
 viajes_aventura.db-*
 app.db
 app.db-*
+__pycache__/
+app.log

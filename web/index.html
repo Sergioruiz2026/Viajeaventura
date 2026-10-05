@@ -227,6 +227,7 @@
     <div id="panel-destinos">
       <div class="card">
         <p class="seccion-titulo">Destinos registrados</p>
+        <p class="nota">Modificar un destino no cambia el precio de los paquetes ya publicados.</p>
         <div id="tabla-destinos"></div>
       </div>
       <div class="card">
@@ -262,6 +263,8 @@
           <div class="campo"><label for="p-regreso">Fecha de regreso</label><input id="p-regreso" type="date" required></div>
           <div class="campo"><label for="p-cupo">Cupo máximo</label><input id="p-cupo" type="number" min="1" required></div>
           <div class="campo"><label for="p-margen">Margen de operación % (vacío = 20 %)</label><input id="p-margen" type="number" min="0" max="200" placeholder="20"></div>
+          <button type="button" class="btn btn-secondary" id="btn-precio-paquete">Calcular precio antes de publicar</button>
+          <div id="precio-paquete" class="alerta alerta-exito oculto"></div>
           <button type="submit" class="btn btn-primary">Crear paquete</button>
         </form>
         <div id="error-paquete" class="alerta alerta-error oculto"></div>
@@ -328,6 +331,13 @@ async function api(metodo, ruta, cuerpo) {
   try { json = await r.json(); } catch { /* vacío */ }
   if (!r.ok) {
     const msg = json?.detail;
+    if (r.status === 401 && sesionActual) {
+      sesionActual = null;
+      document.getElementById('info-usuario').classList.add('oculto');
+      resetFormularioAuth();
+      mostrarVista('vista-auth');
+      throw new Error('La sesión expiró. Inicia sesión nuevamente.');
+    }
     throw new Error(typeof msg === 'string' ? msg : 'Error inesperado.');
   }
   return json;
@@ -537,6 +547,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (e) { mostrarAlerta('error-paquete', e.message, 'error'); }
   });
 
+  document.getElementById('btn-precio-paquete').addEventListener('click', async () => {
+    ocultarAlerta('error-paquete');
+    ocultarAlerta('precio-paquete');
+    try {
+      const r = await previsualizarPaquete();
+      mostrarAlerta('precio-paquete',
+        'Precio fijo por persona: $' + r.precio_por_persona.toLocaleString('es-CL'),
+        'exito');
+    } catch (e) { mostrarAlerta('error-paquete', e.message, 'error'); }
+  });
+
+  async function previsualizarPaquete() {
+    const margenVal = document.getElementById('p-margen').value.trim();
+    return api('POST', '/api/paquetes/previsualizar', {
+      nombre: document.getElementById('p-nombre').value.trim(),
+      destinos: document.getElementById('p-destinos').value
+        .split(',').map(s => s.trim()).filter(Boolean),
+      fecha_salida: document.getElementById('p-salida').value,
+      fecha_regreso: document.getElementById('p-regreso').value,
+      cupo_maximo: parseInt(document.getElementById('p-cupo').value, 10),
+      margen_operacion: margenVal ? parseFloat(margenVal) / 100 : 0.20,
+    });
+  }
+
   // Verificar sesión activa al cargar
   try {
     const r = await fetch('/api/yo');
@@ -575,7 +609,7 @@ function tablaPaquetesCliente(paquetes) {
   const tabla = el('table');
   const thead = el('thead');
   const trh   = el('tr');
-  for (const col of ['Nombre', 'Precio p/p', 'Salida', 'Regreso', 'Cupos', ''])
+  for (const col of ['Nombre y destinos', 'Precio p/p', 'Salida', 'Regreso', 'Cupos', ''])
     trh.appendChild(el('th', col));
   thead.appendChild(trh);
   tabla.appendChild(thead);
@@ -583,7 +617,10 @@ function tablaPaquetesCliente(paquetes) {
   const tbody = el('tbody');
   for (const p of paquetes) {
     const tr = el('tr');
-    tr.appendChild(el('td', fTitulo(p.nombre)));
+    const tdNombre = el('td');
+    tdNombre.appendChild(el('strong', fTitulo(p.nombre)));
+    tdNombre.appendChild(el('div', (p.destinos || []).map(d => fTitulo(d.nombre)).join(', '), { cls: 'nota' }));
+    tr.appendChild(tdNombre);
     tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
     tr.appendChild(el('td', fFecha(p.fecha_salida)));
     tr.appendChild(el('td', fFecha(p.fecha_regreso)));
@@ -620,6 +657,13 @@ function toggleFormReserva(paquete, trPaquete, tbody) {
   const inp = el('input', null, { type: 'number', min: '1', max: String(paquete.cupo_disponible) });
   inp.value = '1';
   div.appendChild(inp);
+  const total = el('strong', '$' + pTotal(paquete, 1).toLocaleString('es-CL'));
+  div.appendChild(el('span', 'Total:'));
+  div.appendChild(total);
+  inp.addEventListener('input', () => {
+    const personas = parseInt(inp.value, 10) || 0;
+    total.textContent = '$' + pTotal(paquete, personas).toLocaleString('es-CL');
+  });
 
   const btnOk   = el('button', 'Confirmar', { cls: 'btn btn-sm btn-primary' });
   const btnNo   = el('button', 'Cancelar',  { cls: 'btn btn-sm btn-secondary' });
@@ -657,6 +701,10 @@ function toggleFormReserva(paquete, trPaquete, tbody) {
   inp.focus();
 }
 
+function pTotal(paquete, personas) {
+  return paquete.precio_por_persona * personas;
+}
+
 /* ─── VISTA CLIENTE: mis reservas ───────────────────────────────── */
 async function cargarReservasCliente() {
   const cont = document.getElementById('cont-reservas-cliente');
@@ -673,7 +721,7 @@ function tablaReservasCliente(reservas) {
   const tabla = el('table');
   const thead = el('thead');
   const trh   = el('tr');
-  for (const col of ['#', 'Paquete', 'Personas', 'Total', 'Estado', ''])
+  for (const col of ['#', 'Paquete', 'Salida', 'Personas', 'Total', 'Estado', ''])
     trh.appendChild(el('th', col));
   thead.appendChild(trh);
   tabla.appendChild(thead);
@@ -683,6 +731,7 @@ function tablaReservasCliente(reservas) {
     const tr = el('tr');
     tr.appendChild(el('td', String(r.id)));
     tr.appendChild(el('td', fTitulo(r.paquete)));
+    tr.appendChild(el('td', fFecha(r.fecha_salida)));
     tr.appendChild(el('td', String(r.cantidad_personas)));
     tr.appendChild(el('td', '$' + r.total.toLocaleString('es-CL')));
     const tdEst = el('td', r.estado);
@@ -719,7 +768,7 @@ async function cargarDestinos() {
     const tabla = el('table');
     const thead = el('thead');
     const trh   = el('tr');
-    for (const col of ['Nombre', 'Zona', 'Días', 'Costo base', 'Estado'])
+    for (const col of ['Nombre', 'Zona', 'Días', 'Costo base', 'Estado', 'Acciones'])
       trh.appendChild(el('th', col));
     thead.appendChild(trh);
     tabla.appendChild(thead);
@@ -733,11 +782,80 @@ async function cargarDestinos() {
       const tdEst = el('td', d.disponible ? 'Disponible' : 'No disponible');
       tdEst.className = d.disponible ? 'estado-vigente' : 'estado-cancelada';
       tr.appendChild(tdEst);
+      const tdAcc = el('td', null, { cls: 'acciones-paquete' });
+      if (d.disponible) {
+        const btnEditar = el('button', 'Editar', { cls: 'btn btn-sm btn-secondary' });
+        btnEditar.addEventListener('click', () => editarDestino(d, tr, tbody));
+        tdAcc.appendChild(btnEditar);
+        const btnEliminar = el('button', 'Eliminar / desactivar', { cls: 'btn btn-sm btn-danger' });
+        btnEliminar.addEventListener('click', async () => {
+          if (!confirm('¿Eliminar o desactivar "' + d.nombre + '"?')) return;
+          try { await api('DELETE', '/api/destinos/' + encodeURIComponent(d.nombre)); cargarDestinos(); }
+          catch (e) { alert(e.message); }
+        });
+        tdAcc.appendChild(btnEliminar);
+      }
+      tr.appendChild(tdAcc);
       tbody.appendChild(tr);
     }
     tabla.appendChild(tbody);
     cont.appendChild(tabla);
   } catch (e) { cont.textContent = 'Error: ' + e.message; }
+}
+
+function editarDestino(destino, filaDestino, tbody) {
+  const anterior = tbody.querySelector('.fila-editar-destino');
+  if (anterior) anterior.remove();
+
+  const fila = el('tr', null, { cls: 'fila-editar-destino' });
+  const celda = el('td', null, { colspan: '7' });
+  celda.style.cssText = 'background:#f0f7ff;padding:14px';
+  const formulario = el('div', null, { cls: 'inline-reservar' });
+  const campos = [
+    ['Nombre', destino.nombre, 'text'],
+    ['Zona', destino.zona, 'text'],
+    ['Descripción', destino.descripcion, 'text'],
+    ['Días', String(destino.duracion_dias), 'number'],
+    ['Costo base', String(destino.costo_base), 'number'],
+  ];
+  const entradas = campos.map(([etiqueta, valor, tipo]) => {
+    const grupo = el('div', null, { cls: 'campo' });
+    grupo.appendChild(el('label', etiqueta));
+    const entrada = el('input', null, { type: tipo });
+    entrada.value = valor;
+    grupo.appendChild(entrada);
+    formulario.appendChild(grupo);
+    return entrada;
+  });
+  const guardar = el('button', 'Guardar cambios', { cls: 'btn btn-sm btn-primary' });
+  const cancelar = el('button', 'Cancelar', { cls: 'btn btn-sm btn-secondary' });
+  const error = el('span', null, { cls: 'alerta alerta-error oculto' });
+  guardar.addEventListener('click', async () => {
+    guardar.disabled = true;
+    error.classList.add('oculto');
+    try {
+      await api('PATCH', '/api/destinos/' + encodeURIComponent(destino.nombre), {
+        nombre: entradas[0].value.trim(), zona: entradas[1].value.trim(),
+        descripcion: entradas[2].value.trim(),
+        duracion_dias: parseInt(entradas[3].value, 10),
+        costo_base: parseInt(entradas[4].value, 10),
+      });
+      fila.remove();
+      cargarDestinos();
+    } catch (e) {
+      error.textContent = e.message;
+      error.classList.remove('oculto');
+      guardar.disabled = false;
+    }
+  });
+  cancelar.addEventListener('click', () => fila.remove());
+  formulario.appendChild(guardar);
+  formulario.appendChild(cancelar);
+  formulario.appendChild(error);
+  celda.appendChild(formulario);
+  fila.appendChild(celda);
+  filaDestino.after(fila);
+  entradas[0].focus();
 }
 
 /* ─── VISTA ADMIN: paquetes ─────────────────────────────────────── */
@@ -751,7 +869,7 @@ async function cargarPaquetesAdmin() {
     const tabla = el('table');
     const thead = el('thead');
     const trh   = el('tr');
-    for (const col of ['#', 'Nombre', 'Precio p/p', 'Salida', 'Regreso', 'Cupo máx', 'Disponibles', 'Estado', ''])
+    for (const col of ['#', 'Nombre y destinos', 'Precio p/p', 'Salida', 'Regreso', 'Cupo máx', 'Usados', 'Disponibles', 'Estado', ''])
       trh.appendChild(el('th', col));
     thead.appendChild(trh);
     tabla.appendChild(thead);
@@ -765,11 +883,15 @@ async function cargarPaquetesAdmin() {
       salidas.forEach((salida, indice) => {
         const tr = el('tr');
         tr.appendChild(el('td', String(salida.id || p.id)));
-        tr.appendChild(el('td', fTitulo(p.nombre)));
+        const tdNombre = el('td');
+        tdNombre.appendChild(el('strong', fTitulo(p.nombre)));
+        tdNombre.appendChild(el('div', (p.destinos || []).map(d => fTitulo(d.nombre)).join(', '), { cls: 'nota' }));
+        tr.appendChild(tdNombre);
         tr.appendChild(el('td', '$' + p.precio_por_persona.toLocaleString('es-CL')));
         tr.appendChild(el('td', fFecha(salida.fecha_salida)));
         tr.appendChild(el('td', fFecha(salida.fecha_regreso)));
         tr.appendChild(el('td', String(salida.cupo_maximo)));
+        tr.appendChild(el('td', String(salida.cupo_usado ?? (salida.cupo_maximo - salida.cupo_disponible))));
         tr.appendChild(el('td', String(salida.cupo_disponible)));
         const vigente = salida.fecha_salida > new Date().toISOString().slice(0, 10);
         const tdEst = el('td', vigente ? 'Vigente' : 'Vencido');
@@ -801,7 +923,7 @@ function toggleFormNuevaSalida(paquete, trPaquete, tbody) {
 
   const trF = el('tr', null, { cls: 'fila-editar' });
   trF.dataset.pid = String(paquete.id);
-  const td = el('td', null, { colspan: '9' });
+  const td = el('td', null, { colspan: '10' });
   td.style.cssText = 'background:#f0f7ff;padding:16px 14px;border-left:3px solid #1a56db';
 
   // Encabezado con nombre del paquete
