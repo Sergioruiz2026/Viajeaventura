@@ -637,6 +637,11 @@ if __name__ == "__main__":
         default=8000,
         help="puerto de la interfaz web (por defecto 8000)",
     )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="dirección de escucha web (use 0.0.0.0 para la red local)",
+    )
     argumentos = parser.parse_args()
 
     if argumentos.web:
@@ -647,7 +652,7 @@ if __name__ == "__main__":
         seleccion = elegir_modo()
 
     if seleccion == "web":
-        iniciar_web(puerto=argumentos.puerto)
+        iniciar_web(host=argumentos.host, puerto=argumentos.puerto)
     elif seleccion == "consola":
         main()
     else:

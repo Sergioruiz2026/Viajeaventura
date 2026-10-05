@@ -108,6 +108,41 @@ python main.py
 La clave Fernet es obligatoria porque el registro del cliente cifra su RUT y
 teléfono. No se debe subir esa clave a GitHub.
 
+### Acceso desde otro PC de la misma red
+
+Por defecto, la aplicación escucha solo en el equipo local (`127.0.0.1`).
+Para que otro PC pueda abrirla, inicia el servidor en todas las interfaces:
+
+```powershell
+python main.py --web --host 0.0.0.0 --puerto 8000
+```
+
+También puedes iniciar Uvicorn directamente:
+
+```powershell
+python -m uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+En el PC servidor, consulta su dirección IPv4:
+
+```powershell
+ipconfig
+```
+
+Desde el otro PC abre `http://IP_DEL_SERVIDOR:8000/`, por ejemplo
+`http://192.168.1.25:8000/`. Ambos equipos deben estar en la misma red.
+Si Windows Firewall solicita permiso, permite Python/Uvicorn en redes
+privadas. Si el puerto sigue bloqueado, crea una regla como administrador:
+
+```powershell
+New-NetFirewallRule -DisplayName "Viajes Aventura 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+```
+
+No uses `http://127.0.0.1:8000/` desde el segundo PC: esa dirección siempre
+apunta al propio segundo PC. El proceso anterior debe detenerse y reiniciarse
+con `--host 0.0.0.0`; cambiar solo la URL del navegador no modifica dónde
+escucha el servidor.
+
 Los administradores se autentican con su nombre de usuario y los clientes con
 su correo.
 

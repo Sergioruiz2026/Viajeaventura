@@ -274,6 +274,13 @@ Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registr
 
 ### 2026-10-05
 
+- **Prompt:** No se puede abrir el sistema desde otro PC.
+- **Respuesta y acciones:** Se agregó el parámetro `--host` a `main.py` y se documentó el arranque con `--host 0.0.0.0`, el acceso mediante la IPv4 del servidor y la regla opcional de Windows Firewall para el puerto 8000.
+- **Archivos modificados:** `main.py`, `README.md`, `changelog.md`.
+- **Validaciones:** Se revisó el flujo de argumentos y se verificará la suite de pruebas y la ayuda de CLI.
+
+### 2026-10-05
+
 - **Prompt:** Cómo solucionar el acceso de usuarios y administradores para que otra persona pueda entrar al clonar el repositorio.
 - **Respuesta y acciones:** Se agregó la creación automática e idempotente de las cuentas demo `cliente.demo@viajeaventura.local` y `admin-demo` al iniciar una base local nueva. Se integró en la consola y en las dependencias de la API, se agregó la opción `VIAJES_DEMO_USUARIOS=0` para desactivarla y se documentó la configuración necesaria de `VIAJES_FERNET_KEY`.
 - **Archivos modificados:** `seguridad/usuarios_demo.py`, `main.py`, `api.py`, `README.md`, `changelog.md`.
