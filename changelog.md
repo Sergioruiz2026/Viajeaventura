@@ -243,3 +243,17 @@ Resultado: 44/44 tests pasan sin regresiones.
 - **Validaciones:** Diagnósticos del HTML sin errores y `git diff --check`.
 
 Se agregaron al `CHANGELOG.md` los 4 prompts de la sesión pendientes de registro.
+
+### 2026-10-05
+
+- **Prompt:** Mostrar los usuarios registrados como administradores.
+- **Respuesta y acciones:** Se consultó `app.db` y se identificaron los administradores registrados: `admin` (ID 3) y `SergioR` (ID 4).
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Consulta SQLite filtrada por `rol = 'ADMIN'` ejecutada correctamente.
+
+### 2026-10-05
+
+- **Prompt:** Ejecutar el localhost.
+- **Respuesta y acciones:** Se inició la API web local con Uvicorn en `http://127.0.0.1:8000/`.
+- **Archivos modificados:** `changelog.md`.
+- **Validaciones:** Solicitud HTTP a `/` respondió con estado 200.

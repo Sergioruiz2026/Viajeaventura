@@ -545,5 +545,105 @@ def main():
             mostrar_error_inesperado()
 
 
+# ==========================
+# INTERFAZ WEB
+# ==========================
+
+def iniciar_web(host="127.0.0.1", puerto=8000):
+    """Prepara la base de datos, levanta la API y abre el navegador."""
+    import threading
+    import webbrowser
+
+    cargar_configuracion_entorno_usuario()
+    try:
+        configurar_logging()
+        inicializar_aplicacion()
+        cargar_destinos_iniciales()
+        asegurar_administrador_configurado()
+    except RuntimeError:
+        mostrar_error_configuracion()
+        return
+    except Exception:
+        mostrar_error_inesperado()
+        return
+
+    # La API abre su propia conexión en cada solicitud.
+    try:
+        base_datos.cerrar()
+    except Exception:
+        pass
+
+    if not os.environ.get("VIAJES_FERNET_KEY"):
+        print(
+            "Aviso: VIAJES_FERNET_KEY no está definida; "
+            "el registro de clientes fallará."
+        )
+
+    import uvicorn
+    from api import app
+
+    url = f"http://{host}:{puerto}/"
+    threading.Timer(1.5, webbrowser.open, args=(url,)).start()
+    print(f"Abriendo {url}  (Ctrl+C para detener el servidor)")
+    uvicorn.run(app, host=host, port=puerto)
+
+
+def elegir_modo():
+    """Pregunta si se abre la interfaz web o la consola."""
+    while True:
+        print("\n======================")
+        print(" VIAJES AVENTURA ")
+        print("======================")
+        print("¿Cómo desea abrir la aplicación?")
+        print("1. Interfaz web (navegador)")
+        print("2. Consola")
+        print("0. Salir")
+        try:
+            opcion = input("Seleccione: ").strip()
+        except EOFError:
+            return None
+        if opcion == "1":
+            return "web"
+        if opcion == "2":
+            return "consola"
+        if opcion == "0":
+            return None
+        print("Opción inválida.")
+
+
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Viajes Aventura")
+    modo = parser.add_mutually_exclusive_group()
+    modo.add_argument(
+        "--web",
+        action="store_true",
+        help="abre la interfaz web sin preguntar",
+    )
+    modo.add_argument(
+        "--consola",
+        action="store_true",
+        help="abre el menú de consola sin preguntar",
+    )
+    parser.add_argument(
+        "--puerto",
+        type=int,
+        default=8000,
+        help="puerto de la interfaz web (por defecto 8000)",
+    )
+    argumentos = parser.parse_args()
+
+    if argumentos.web:
+        seleccion = "web"
+    elif argumentos.consola:
+        seleccion = "consola"
+    else:
+        seleccion = elegir_modo()
+
+    if seleccion == "web":
+        iniciar_web(puerto=argumentos.puerto)
+    elif seleccion == "consola":
+        main()
+    else:
+        print("Hasta pronto.")
